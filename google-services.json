@@ -14,6 +14,30 @@
       },
       "oauth_client": [
         {
+          "client_id": "170326285967-ci5tdl5b4a173fd1fiorb7q1r00s0072.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.varsigo.app",
+            "certificate_hash": "455da4d885f60b5a44fa0baf2a92d650570baf72"
+          }
+        },
+        {
+          "client_id": "170326285967-k7jatqauvivfruedd5srkcdabj144tea.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.varsigo.app",
+            "certificate_hash": "cda045d19db8eda132a31d0d5641f784518a2dba"
+          }
+        },
+        {
+          "client_id": "170326285967-sp67s8hu6re0a49du4us13336bu6p1q0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.varsigo.app",
+            "certificate_hash": "29fef5e78dc880dcc87dfefc129254a04e9d05d3"
+          }
+        },
+        {
           "client_id": "170326285967-6tjg3ojmbu8o0tgl850uq1dlo7s6hrg3.apps.googleusercontent.com",
           "client_type": 3
         }

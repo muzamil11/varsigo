@@ -13,6 +13,7 @@ GoogleSignin.configure({
 });
 
 function friendlyGoogleError(error: unknown): string {
+  console.error('[google-signin]', error);
   if (isErrorWithCode(error)) {
     switch (error.code) {
       case statusCodes.IN_PROGRESS:
@@ -20,10 +21,11 @@ function friendlyGoogleError(error: unknown): string {
       case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
         return 'Google Play Services is not available on this device.';
       default:
-        return 'Something went wrong. Please try again.';
+        return `Something went wrong (code: ${error.code}). Please try again.`;
     }
   }
-  return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+  const message = error instanceof Error ? error.message : String(error);
+  return `Something went wrong: ${message}`;
 }
 
 export async function signInWithGoogle(): Promise<FirebaseUser> {

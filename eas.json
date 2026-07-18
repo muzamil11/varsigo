@@ -20,7 +20,7 @@
         "EXPO_PUBLIC_DELETE_ACCOUNT_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/delete-account",
         "EXPO_PUBLIC_REPORT_REVIEW_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/report-review",
         "EXPO_PUBLIC_COMMUNITY_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/community-action",
-        "EXPO_PUBLIC_ADMIN_EMAIL": "muzammilchandio110a@gmail.com",
+        "EXPO_PUBLIC_ADMIN_EMAIL": "muzammilchandio1112@gmail.com",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "170326285967-6tjg3ojmbu8o0tgl850uq1dlo7s6hrg3.apps.googleusercontent.com"
       },
       "channel": "development"
@@ -40,7 +40,7 @@
         "EXPO_PUBLIC_DELETE_ACCOUNT_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/delete-account",
         "EXPO_PUBLIC_REPORT_REVIEW_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/report-review",
         "EXPO_PUBLIC_COMMUNITY_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/community-action",
-        "EXPO_PUBLIC_ADMIN_EMAIL": "muzammilchandio110a@gmail.com",
+        "EXPO_PUBLIC_ADMIN_EMAIL": "muzammilchandio1112@gmail.com",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "170326285967-6tjg3ojmbu8o0tgl850uq1dlo7s6hrg3.apps.googleusercontent.com"
       },
       "channel": "preview"
@@ -60,7 +60,7 @@
         "EXPO_PUBLIC_DELETE_ACCOUNT_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/delete-account",
         "EXPO_PUBLIC_REPORT_REVIEW_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/report-review",
         "EXPO_PUBLIC_COMMUNITY_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/community-action",
-        "EXPO_PUBLIC_ADMIN_EMAIL": "muzammilchandio110a@gmail.com",
+        "EXPO_PUBLIC_ADMIN_EMAIL": "muzammilchandio1112@gmail.com",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "170326285967-6tjg3ojmbu8o0tgl850uq1dlo7s6hrg3.apps.googleusercontent.com"
       },
       "channel": "production"
