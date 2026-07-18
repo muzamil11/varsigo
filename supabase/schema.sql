@@ -10,11 +10,23 @@ create extension if not exists pgcrypto;
 
 create table if not exists users (
   id uuid primary key default gen_random_uuid(),
-  phone text unique not null,
+  firebase_uid text unique not null,
+  email text not null,
   name text,
   university text default 'NED',
   created_at timestamptz default now()
 );
+
+-- Migrated from Firebase phone-OTP identity (phone) to Google Sign-In
+-- (firebase_uid + email). No production users existed at migration time, so
+-- existing rows are cleared rather than backfilled — safe to re-run.
+delete from users;
+alter table users drop column if exists phone;
+alter table users add column if not exists firebase_uid text;
+alter table users add column if not exists email text;
+alter table users alter column firebase_uid set not null;
+alter table users alter column email set not null;
+create unique index if not exists idx_users_firebase_uid on users(firebase_uid);
 
 create table if not exists departments (
   id uuid primary key default gen_random_uuid(),
@@ -264,7 +276,7 @@ alter table questions add constraint questions_department_id_fkey
 -- ─────────────────────────────────────────────────────────────────────────
 -- Row Level Security
 --
--- IMPORTANT: this app authenticates users via Firebase (phone OTP), not
+-- IMPORTANT: this app authenticates users via Firebase (Google Sign-In), not
 -- Supabase Auth — so there is no `auth.uid()` to key policies off of. The
 -- Supabase client connects with the public anon key. The policies below are
 -- deliberately permissive (anon can read/insert) so the MVP works end to end.
@@ -318,9 +330,10 @@ create policy "public read approved uploads" on uploads for select using (approv
 drop policy if exists "public insert uploads" on uploads;
 create policy "public insert uploads" on uploads for insert with check (true);
 
--- users: the app upserts a row keyed by phone right after Firebase verifies
--- the OTP, and later reads/writes its own row by id. Anon can upsert/select;
--- there's no per-row auth.uid() check available (see note above).
+-- users: the app upserts a row keyed by firebase_uid right after Firebase
+-- verifies the Google sign-in, and later reads/writes its own row by id.
+-- Anon can upsert/select; there's no per-row auth.uid() check available
+-- (see note above).
 drop policy if exists "public upsert users" on users;
 create policy "public upsert users" on users for insert with check (true);
 
@@ -337,10 +350,10 @@ create policy "public read users" on users for select using (true);
 -- approve/reject them. There's still no auth.uid() to key a real "is this
 -- request from the admin" policy off of (same limitation as above), so this
 -- is intentionally as permissive as the rest of the MVP's RLS — the actual
--- gate is the client-side phone check (src/lib/admin.ts's isAdminPhone(),
+-- gate is the client-side email check (src/lib/admin.ts's isAdminEmail(),
 -- used by authStore.isAdmin() and every src/features/admin/api.ts call).
 -- Before this app has real users, move moderation behind a server that
--- verifies the Firebase ID token and the admin phone.
+-- verifies the Firebase ID token and the admin email.
 -- ─────────────────────────────────────────────────────────────────────────
 
 drop policy if exists "public read all reviews" on reviews;

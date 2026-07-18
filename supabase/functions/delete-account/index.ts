@@ -11,7 +11,7 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-async function getVerifiedPhone(authHeader: string | null): Promise<string> {
+async function getVerifiedUid(authHeader: string | null): Promise<string> {
   const token = authHeader?.replace(/^Bearer\s+/i, '');
   if (!token) throw new Error('Missing Firebase token.');
 
@@ -25,11 +25,11 @@ async function getVerifiedPhone(authHeader: string | null): Promise<string> {
   );
 
   const data = await response.json();
-  const phone = data?.users?.[0]?.phoneNumber;
-  if (!response.ok || !phone) {
+  const uid = data?.users?.[0]?.localId;
+  if (!response.ok || !uid) {
     throw new Error('Not authorized.');
   }
-  return phone;
+  return uid;
 }
 
 Deno.serve(async (req) => {
@@ -38,14 +38,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const phone = await getVerifiedPhone(req.headers.get('Authorization'));
+    const uid = await getVerifiedUid(req.headers.get('Authorization'));
     const supabase = createClient(
       requiredEnv('SUPABASE_URL'),
       requiredEnv('SUPABASE_SERVICE_ROLE_KEY'),
       { auth: { persistSession: false } },
     );
 
-    const { error } = await supabase.from('users').delete().eq('phone', phone);
+    const { error } = await supabase.from('users').delete().eq('firebase_uid', uid);
     if (error) throw error;
 
     return Response.json({ data: null }, { headers: corsHeaders });

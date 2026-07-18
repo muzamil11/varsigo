@@ -111,14 +111,14 @@ export default function AdminScreen() {
     setWarning(null);
     try {
       const results = await Promise.allSettled([
-        loadAdminResource('stats', fetchAdminStats(user.phone)),
-        loadAdminResource('reviews', fetchPendingReviews(user.phone)),
-        loadAdminResource('uploads', fetchPendingUploads(user.phone)),
-        loadAdminResource('departments', fetchAdminDepartments(user.phone)),
-        loadAdminResource('courses', fetchAdminCourses(user.phone)),
-        loadAdminResource('teachers', fetchAdminTeachers(user.phone)),
-        loadAdminResource('teacher suggestions', fetchPendingTeacherSuggestions(user.phone)),
-        loadAdminResource('community reports', fetchReportedCommunity(user.phone)),
+        loadAdminResource('stats', fetchAdminStats(user.email)),
+        loadAdminResource('reviews', fetchPendingReviews(user.email)),
+        loadAdminResource('uploads', fetchPendingUploads(user.email)),
+        loadAdminResource('departments', fetchAdminDepartments(user.email)),
+        loadAdminResource('courses', fetchAdminCourses(user.email)),
+        loadAdminResource('teachers', fetchAdminTeachers(user.email)),
+        loadAdminResource('teacher suggestions', fetchPendingTeacherSuggestions(user.email)),
+        loadAdminResource('community reports', fetchReportedCommunity(user.email)),
         loadAdminResource('department list', fetchDepartments()),
       ] as const);
 
@@ -180,7 +180,7 @@ export default function AdminScreen() {
     }).start();
   }, [segment, segmentOpacity]);
 
-  // Someone reaching this route without the admin phone (e.g. deep link, or
+  // Someone reaching this route without the admin email (e.g. deep link, or
   // typing the path directly) — the tab itself is already hidden for them,
   // this is the belt-and-suspenders guard on the route.
   useEffect(() => {
@@ -207,7 +207,7 @@ export default function AdminScreen() {
   const handleApproveReview = async (review: AdminReview) => {
     setReviews((prev) => prev.filter((r) => r.id !== review.id));
     try {
-      await approveReview(user!.phone, review.id);
+      await approveReview(user!.email, review.id);
       setStats((s) =>
         s ? { ...s, pendingReviews: s.pendingReviews - 1, approvedReviews: s.approvedReviews + 1 } : s,
       );
@@ -220,7 +220,7 @@ export default function AdminScreen() {
   const handleRejectReview = async (review: AdminReview) => {
     setReviews((prev) => prev.filter((r) => r.id !== review.id));
     try {
-      await rejectReview(user!.phone, review.id);
+      await rejectReview(user!.email, review.id);
       setStats((s) => (s ? { ...s, pendingReviews: s.pendingReviews - 1 } : s));
     } catch (err) {
       Alert.alert('Could not reject', err instanceof Error ? err.message : 'Please try again.');
@@ -231,7 +231,7 @@ export default function AdminScreen() {
   const handleApproveUpload = async (upload: AdminUpload) => {
     setUploads((prev) => prev.filter((u) => u.id !== upload.id));
     try {
-      await approveUpload(user!.phone, upload.id);
+      await approveUpload(user!.email, upload.id);
       setStats((s) =>
         s ? { ...s, pendingUploads: s.pendingUploads - 1, approvedUploads: s.approvedUploads + 1 } : s,
       );
@@ -244,7 +244,7 @@ export default function AdminScreen() {
   const handleRejectUpload = async (upload: AdminUpload) => {
     setUploads((prev) => prev.filter((u) => u.id !== upload.id));
     try {
-      await rejectUpload(user!.phone, upload.id);
+      await rejectUpload(user!.email, upload.id);
       setStats((s) => (s ? { ...s, pendingUploads: s.pendingUploads - 1 } : s));
     } catch (err) {
       Alert.alert('Could not reject', err instanceof Error ? err.message : 'Please try again.');
@@ -255,7 +255,7 @@ export default function AdminScreen() {
   const handleAddTeacher = async (name: string, departmentId: string, courseIds: string[]) => {
     if (!user) return;
     try {
-      await addTeacher({ adminPhone: user.phone, name, departmentId, courseIds });
+      await addTeacher({ adminEmail: user.email, name, departmentId, courseIds });
       await load(true);
     } catch (err) {
       Alert.alert('Could not add teacher', err instanceof Error ? err.message : 'Please try again.');
@@ -266,7 +266,7 @@ export default function AdminScreen() {
   const handleAddCourse = async (name: string, code: string, departmentId: string) => {
     if (!user) return;
     try {
-      await addCourse({ adminPhone: user.phone, name, code, departmentId });
+      await addCourse({ adminEmail: user.email, name, code, departmentId });
       await load(true);
     } catch (err) {
       Alert.alert('Could not add course', err instanceof Error ? err.message : 'Please try again.');
@@ -277,7 +277,7 @@ export default function AdminScreen() {
   const handleAssignTeacherCourse = async (teacherId: string, courseId: string) => {
     if (!user) return;
     try {
-      await assignTeacherCourse(user.phone, teacherId, courseId);
+      await assignTeacherCourse(user.email, teacherId, courseId);
       await load(true);
     } catch (err) {
       Alert.alert('Could not assign course', err instanceof Error ? err.message : 'Please try again.');
@@ -288,7 +288,7 @@ export default function AdminScreen() {
   const handleAddDepartment = async (name: string) => {
     if (!user) return;
     try {
-      await addDepartment(user.phone, name);
+      await addDepartment(user.email, name);
       await load(true);
     } catch (err) {
       Alert.alert('Could not add department', err instanceof Error ? err.message : 'Please try again.');
@@ -310,7 +310,7 @@ export default function AdminScreen() {
             setDepartments((prev) => prev.filter((d) => d.id !== department.id));
             if (department.id === undefined) return;
             try {
-              await deleteDepartment(user!.phone, department.id);
+              await deleteDepartment(user!.email, department.id);
               setStats((s) => (s ? { ...s, totalDepartments: s.totalDepartments - 1 } : s));
               await load(true);
             } catch (err) {
@@ -339,7 +339,7 @@ export default function AdminScreen() {
           onPress: async () => {
             setAdminCourses((prev) => prev.filter((item) => item.id !== course.id));
             try {
-              await deleteCourse(user!.phone, course.id);
+              await deleteCourse(user!.email, course.id);
               setStats((s) => (s ? { ...s, totalCourses: s.totalCourses - 1 } : s));
               await load(true);
             } catch (err) {
@@ -367,7 +367,7 @@ export default function AdminScreen() {
           onPress: async () => {
             setAdminTeachers((prev) => prev.filter((t) => t.id !== teacher.id));
             try {
-              await deleteTeacher(user!.phone, teacher.id);
+              await deleteTeacher(user!.email, teacher.id);
               setStats((s) => (s ? { ...s, totalTeachers: s.totalTeachers - 1 } : s));
             } catch (err) {
               Alert.alert(
@@ -385,7 +385,7 @@ export default function AdminScreen() {
   const handleApproveSuggestion = async (suggestion: TeacherSuggestion) => {
     setTeacherSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
     try {
-      await approveTeacherSuggestion(user!.phone, suggestion);
+      await approveTeacherSuggestion(user!.email, suggestion);
       setStats((s) =>
         s
           ? {
@@ -405,7 +405,7 @@ export default function AdminScreen() {
   const handleRejectSuggestion = async (suggestion: TeacherSuggestion) => {
     setTeacherSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
     try {
-      await rejectTeacherSuggestion(user!.phone, suggestion.id);
+      await rejectTeacherSuggestion(user!.email, suggestion.id);
       setStats((s) => (s ? { ...s, pendingTeacherSuggestions: s.pendingTeacherSuggestions - 1 } : s));
     } catch (err) {
       Alert.alert('Could not reject', err instanceof Error ? err.message : 'Please try again.');
@@ -416,7 +416,7 @@ export default function AdminScreen() {
   const handleDismissCommunityReport = async (report: AdminCommunityReport) => {
     setCommunityReports((prev) => prev.filter((item) => item.id !== report.id));
     try {
-      await dismissCommunityReport(user!.phone, report);
+      await dismissCommunityReport(user!.email, report);
       setStats((s) =>
         s ? { ...s, pendingCommunityReports: Math.max(0, s.pendingCommunityReports - 1) } : s,
       );
@@ -435,7 +435,7 @@ export default function AdminScreen() {
         onPress: async () => {
           setCommunityReports((prev) => prev.filter((item) => item.id !== report.id));
           try {
-            await hideCommunityItem(user!.phone, report);
+            await hideCommunityItem(user!.email, report);
             setStats((s) =>
               s ? { ...s, pendingCommunityReports: Math.max(0, s.pendingCommunityReports - 1) } : s,
             );

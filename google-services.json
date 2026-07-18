@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "170326285967",
+    "project_id": "campuslens-6ed2b",
+    "storage_bucket": "campuslens-6ed2b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:170326285967:android:9538ec52aa4a30f6a21afa",
+        "android_client_info": {
+          "package_name": "com.varsigo.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "170326285967-6tjg3ojmbu8o0tgl850uq1dlo7s6hrg3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1p-GTnU2ICavynSBXIvM5Ef6GSH4mDi4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "170326285967-6tjg3ojmbu8o0tgl850uq1dlo7s6hrg3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

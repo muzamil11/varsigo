@@ -12,7 +12,8 @@
 
 export interface UserRow {
   id: string;
-  phone: string;
+  firebase_uid: string;
+  email: string;
   name: string | null;
   university: string;
   created_at: string;

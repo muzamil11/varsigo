@@ -3,16 +3,28 @@ import { callCommunityFunction, isCommunityFunctionConfigured } from '@/lib/comm
 import { supabase, toFriendlyError } from '@/lib/supabase';
 import type { UserRow } from '@/lib/database.types';
 
-/** Creates the users row on first login, or fetches the existing one by phone. */
-export async function upsertUserByPhone(phone: string): Promise<UserRow> {
+export interface GoogleIdentity {
+  firebaseUid: string;
+  email: string;
+}
+
+/** Creates the users row on first login, or fetches the existing one by
+ *  Firebase UID (the stable identity Google Sign-In verifies). */
+export async function upsertUserByGoogle(identity: GoogleIdentity): Promise<UserRow> {
   if (isCommunityFunctionConfigured()) {
-    return callCommunityFunction<UserRow>('getOrCreateUser', { phone });
+    return callCommunityFunction<UserRow>('getOrCreateUser', {
+      firebaseUid: identity.firebaseUid,
+      email: identity.email,
+    });
   }
 
   try {
     const { data, error } = await supabase
       .from('users')
-      .upsert({ phone }, { onConflict: 'phone', ignoreDuplicates: false })
+      .upsert(
+        { firebase_uid: identity.firebaseUid, email: identity.email },
+        { onConflict: 'firebase_uid', ignoreDuplicates: false },
+      )
       .select()
       .single();
 

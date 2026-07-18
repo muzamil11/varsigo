@@ -46,7 +46,12 @@ function analyzeQuality(input: string): { flags: string[]; priority: number } {
   return { flags: [...flags], priority };
 }
 
-async function getVerifiedPhone(authHeader: string | null): Promise<string> {
+interface VerifiedIdentity {
+  uid: string;
+  email: string;
+}
+
+async function getVerifiedIdentity(authHeader: string | null): Promise<VerifiedIdentity> {
   const token = authHeader?.replace(/^Bearer\s+/i, '');
   if (!token) throw new Error('Missing Firebase token.');
 
@@ -60,25 +65,32 @@ async function getVerifiedPhone(authHeader: string | null): Promise<string> {
   );
 
   const data = await response.json();
-  const phone = data?.users?.[0]?.phoneNumber;
-  if (!response.ok || !phone) throw new Error('Not authorized.');
-  return phone;
+  const uid = data?.users?.[0]?.localId;
+  const email = data?.users?.[0]?.email;
+  if (!response.ok || !uid || !email) throw new Error('Not authorized.');
+  return { uid, email };
 }
 
-async function getOrCreateUserId(supabase: SupabaseClient, phone: string): Promise<string> {
+async function getOrCreateUserId(supabase: SupabaseClient, identity: VerifiedIdentity): Promise<string> {
   const { data, error } = await supabase
     .from('users')
-    .upsert({ phone }, { onConflict: 'phone', ignoreDuplicates: false })
+    .upsert(
+      { firebase_uid: identity.uid, email: identity.email },
+      { onConflict: 'firebase_uid', ignoreDuplicates: false },
+    )
     .select('id')
     .single();
   if (error) throw error;
   return data.id;
 }
 
-async function getOrCreateUserRow(supabase: SupabaseClient, phone: string) {
+async function getOrCreateUserRow(supabase: SupabaseClient, identity: VerifiedIdentity) {
   const { data, error } = await supabase
     .from('users')
-    .upsert({ phone }, { onConflict: 'phone', ignoreDuplicates: false })
+    .upsert(
+      { firebase_uid: identity.uid, email: identity.email },
+      { onConflict: 'firebase_uid', ignoreDuplicates: false },
+    )
     .select()
     .single();
   if (error) throw error;
@@ -103,17 +115,17 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const phone = await getVerifiedPhone(req.headers.get('Authorization'));
+    const identity = await getVerifiedIdentity(req.headers.get('Authorization'));
     const { action, payload = {} } = await req.json();
     const supabase = createClient(
       requiredEnv('SUPABASE_URL'),
       requiredEnv('SUPABASE_SERVICE_ROLE_KEY'),
       { auth: { persistSession: false } },
     );
-    const userId = await getOrCreateUserId(supabase, phone);
+    const userId = await getOrCreateUserId(supabase, identity);
 
     if (action === 'getOrCreateUser') {
-      const user = await getOrCreateUserRow(supabase, phone);
+      const user = await getOrCreateUserRow(supabase, identity);
       return Response.json({ data: user }, { headers: corsHeaders });
     }
 

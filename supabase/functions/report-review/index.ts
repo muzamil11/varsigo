@@ -60,7 +60,12 @@ function assertScore(value: unknown, name: string): number {
   return score;
 }
 
-async function getVerifiedPhone(authHeader: string | null): Promise<string> {
+interface VerifiedIdentity {
+  uid: string;
+  email: string;
+}
+
+async function getVerifiedIdentity(authHeader: string | null): Promise<VerifiedIdentity> {
   const token = authHeader?.replace(/^Bearer\s+/i, '');
   if (!token) throw new Error('Missing Firebase token.');
 
@@ -73,15 +78,19 @@ async function getVerifiedPhone(authHeader: string | null): Promise<string> {
     },
   );
   const data = await response.json();
-  const phone = data?.users?.[0]?.phoneNumber;
-  if (!response.ok || !phone) throw new Error('Not authorized.');
-  return phone;
+  const uid = data?.users?.[0]?.localId;
+  const email = data?.users?.[0]?.email;
+  if (!response.ok || !uid || !email) throw new Error('Not authorized.');
+  return { uid, email };
 }
 
-async function getOrCreateUserId(supabase: SupabaseClient, phone: string): Promise<string> {
+async function getOrCreateUserId(supabase: SupabaseClient, identity: VerifiedIdentity): Promise<string> {
   const { data, error } = await supabase
     .from('users')
-    .upsert({ phone }, { onConflict: 'phone', ignoreDuplicates: false })
+    .upsert(
+      { firebase_uid: identity.uid, email: identity.email },
+      { onConflict: 'firebase_uid', ignoreDuplicates: false },
+    )
     .select('id')
     .single();
   if (error) throw error;
@@ -94,7 +103,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const phone = await getVerifiedPhone(req.headers.get('Authorization'));
+    const identity = await getVerifiedIdentity(req.headers.get('Authorization'));
     const body = await req.json();
     const action = body.action ?? 'reportReview';
     const payload = body.payload ?? body;
@@ -106,7 +115,7 @@ Deno.serve(async (req) => {
     );
 
     if (action === 'submitReview') {
-      const userId = await getOrCreateUserId(supabase, phone);
+      const userId = await getOrCreateUserId(supabase, identity);
       const teacherId = payload.teacherId;
       const comment = sanitizeText(payload.comment);
       if (!teacherId) throw new Error('Missing teacher id.');

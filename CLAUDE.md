@@ -12,11 +12,10 @@ MVP features: **Teacher Reviews**, **Past Papers & Notes**, **University FAQ**.
 - **NativeWind v4** — Tailwind classes via `className`; config in `tailwind.config.js`
 - **Zustand** — global state (`src/store/`), persisted with AsyncStorage
 - **Supabase** — Postgres (teachers/reviews/departments/uploads) + Storage (`papers` bucket for PDFs)
-- **Firebase** — phone OTP auth via the JS SDK + a WebView reCAPTCHA (`expo-firebase-recaptcha`), chosen specifically to keep the app Expo-Go-compatible — see "Auth" below for the tradeoff this implies.
+- **Firebase** — Google Sign-In auth via `@react-native-google-signin/google-signin` + the Firebase JS SDK's `signInWithCredential`. This is a native module, so the app now requires a custom dev client — see "Auth" below.
 
-Run with `npx expo start` and scan the QR code in Expo Go.
+Run with `npx expo start --dev-client` (after installing a dev build via `eas build --profile development` — plain Expo Go no longer works, see "Auth" below).
 Typecheck with `npx tsc --noEmit`. Bundle-check with `npx expo export --platform android`.
-`npx expo-doctor` will always show 1 known failure (`expo-firebase-recaptcha` deprecated) — that's accepted, see "Auth" below.
 
 ## Folder structure
 
@@ -25,14 +24,14 @@ src/
 ├── app/                  # Expo Router screens (file = route)
 │   ├── _layout.tsx       # Root stack + StatusBar + theme sync
 │   ├── index.tsx         # Splash → routes to /(tabs) or /login based on authStore
-│   ├── login.tsx         # Phone + OTP via Firebase, upserts Supabase user, sets authStore
+│   ├── login.tsx         # Google Sign-In via Firebase, upserts Supabase user, sets authStore
 │   ├── (tabs)/           # Bottom tab bar: Home, Teachers, Papers, FAQ
 │   ├── teachers/[id]/    # Teacher detail + add-review (stack, outside tabs)
 │   └── papers/upload.tsx # Upload PDF flow (stack, outside tabs)
 ├── components/           # Shared UI: Screen, Card, Button, Chip, SearchBar, ThemeToggle,
 │                         # StateMessage (error/empty), Skeleton (loading placeholders)
 ├── features/             # Feature modules — domain types + api.ts (Supabase calls) + components
-│   ├── auth/             # otp.ts (Firebase phone auth), api.ts (upsert Supabase user)
+│   ├── auth/             # google.ts (Firebase Google Sign-In), api.ts (upsert Supabase user)
 │   ├── departments/      # types.ts, api.ts (fetchDepartments)
 │   ├── teachers/         # data.ts (types), api.ts (fetch/submit), TeacherCard, RatingBar
 │   ├── papers/           # data.ts (types), api.ts (fetch/upload), PaperCard
@@ -51,14 +50,21 @@ Import alias: `@/` → `src/` (see `tsconfig.json` paths).
 
 - **Schema**: `supabase/schema.sql` is the source of truth — run it once in the Supabase SQL Editor. It creates `users`, `departments`, `teachers`, `reviews`, `uploads`, indexes, RLS policies, and the `papers` storage bucket.
 - **RLS is intentionally permissive**: this app authenticates via Firebase, not Supabase Auth, so there's no `auth.uid()` to key policies on. Anon can read approved rows and insert reviews/uploads/users, but NOT insert departments/teachers directly (see `src/lib/seed.ts`, which uses the service-role key instead). Before real users hit this, move writes behind a server that verifies the Firebase ID token.
+- **`users`** is keyed by `firebase_uid` (the Firebase UID from Google Sign-In), not `phone` — see "Auth" below. `email` is stored alongside it for admin identification and display.
 - **`src/lib/supabase.ts`** exports a plain (non-schema-generic) client — see the comment at the top of `src/lib/database.types.ts` for why `createClient<Database>()` isn't used (a hand-written `Database` type collapses table rows to `never` without the `__InternalSupabase` marker that `supabase gen types` produces). Each `api.ts` module casts query results to the hand-written `Row` types instead.
 - **Seeding**: `npm run seed` populates 6 NED departments × 3 teachers. Needs `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` (server-only, no `EXPO_PUBLIC_` prefix — never bundled into the app).
 
 ## Auth
 
-Firebase phone OTP, using the Firebase JS SDK (not `@react-native-firebase`) so the app keeps working in Expo Go. Native platforms need a reCAPTCHA challenge for phone auth, provided here by `expo-firebase-recaptcha`'s `FirebaseRecaptchaVerifierModal` (a WebView-based challenge) in `login.tsx`.
+Google Sign-In via `@react-native-google-signin/google-signin` (native module) + Firebase's `signInWithCredential` (`src/features/auth/google.ts`). `GoogleSignin.signIn()` returns an ID token, which is exchanged for a Firebase credential — the resulting Firebase UID + email become the Supabase `users` row (`firebase_uid` unique key, `email` for display/admin identification).
 
-**Known tradeoff**: `expo-firebase-recaptcha` was removed from Expo's supported package list as of SDK 48 and is unmaintained. It still works (verified: bundles cleanly, its native module import degrades to a console warning rather than crashing in Expo Go). `expo-doctor` will always flag it — that's expected, not a regression. If/when this app moves off Expo Go to a custom dev client, migrate to `@react-native-firebase/auth` for native phone auth (SMS autofill, no reCAPTCHA UI) instead.
+**Known tradeoff — Expo Go no longer works.** `@react-native-google-signin/google-signin` requires custom native code, so this app now needs a **custom dev client** instead of Expo Go (this replaced the earlier phone-OTP + `expo-firebase-recaptcha` setup, which was chosen specifically to stay Expo-Go-compatible — that constraint no longer holds). Day-to-day dev flow: `eas build --profile development` once to get an installable dev client, then `npx expo start --dev-client` instead of scanning into Expo Go.
+
+**Required manual setup** (not automatable from code — needs your own Firebase/Google Cloud console access):
+1. Firebase Console → Authentication → Sign-in method → enable **Google**.
+2. Firebase Console → Project settings → add an **Android** app (package `com.varsigo.app`) and an **iOS** app (bundle id `com.varsigo.app`) if not already registered — download `google-services.json` / `GoogleService-Info.plist` into the project root (paths referenced in `app.json`).
+3. Add the Android app's SHA-1/SHA-256 fingerprint in Firebase (get it via `eas credentials`) — required for Google Sign-In to work on Android.
+4. Set `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (the "Web client (auto created by Google Service)" OAuth client ID — also findable inside `google-services.json` under `client[].oauth_client[]` where `client_type` is `3`) and `EXPO_PUBLIC_ADMIN_EMAIL` in `.env.local` and in every `eas.json` build profile.
 
 `src/store/authStore.ts` (Zustand + AsyncStorage) is the actual "is logged in" source of truth across restarts — not Firebase's own session, which isn't persisted (see comment in `src/lib/firebase.ts`). The splash screen (`app/index.tsx`) waits for `hasHydrated` before deciding whether to route to `/login` or `/(tabs)`.
 

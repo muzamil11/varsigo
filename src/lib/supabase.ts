@@ -14,9 +14,9 @@ if (!isSupabaseConfigured) {
   );
 }
 
-// Auth is not used here — Varsigo authenticates via Firebase phone OTP,
-// not Supabase Auth — so session persistence is disabled to avoid pulling in
-// an AsyncStorage adapter for a session that never exists.
+// Auth is not used here — Varsigo authenticates via Firebase (Google
+// Sign-In), not Supabase Auth — so session persistence is disabled to avoid
+// pulling in an AsyncStorage adapter for a session that never exists.
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder-anon-key',

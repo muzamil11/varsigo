@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { isAdminPhone } from '@/lib/admin';
+import { isAdminEmail } from '@/lib/admin';
 import type { UserRow } from '@/lib/database.types';
 
 interface AuthState {
@@ -23,7 +23,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       hasHydrated: false,
       isAuthenticated: () => Boolean(get().firebaseUid && get().user),
-      isAdmin: () => isAdminPhone(get().user?.phone),
+      isAdmin: () => isAdminEmail(get().user?.email),
       setUser: (firebaseUid, user) => set({ firebaseUid, user }),
       updateUser: (user) => set({ user }),
       logout: () => set({ firebaseUid: null, user: null }),

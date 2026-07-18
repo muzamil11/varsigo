@@ -1,4 +1,4 @@
-import { isAdminPhone } from '@/lib/admin';
+import { isAdminEmail } from '@/lib/admin';
 import { callAdminFunction, isAdminFunctionConfigured } from '@/lib/adminFunction';
 import { sanitizeText } from '@/lib/sanitize';
 import { supabase, toFriendlyError } from '@/lib/supabase';
@@ -14,12 +14,12 @@ import type {
   TeacherSuggestion,
 } from './data';
 
-/** Every function here is called with the caller's own phone number and
- *  re-checks it against EXPO_PUBLIC_ADMIN_PHONE before touching the
- *  database — see src/lib/admin.ts for why this is a client-side gate, not
- *  a real security boundary. */
-function assertAdmin(phone: string | null | undefined) {
-  if (!isAdminPhone(phone)) {
+/** Every function here is called with the caller's own email and re-checks
+ *  it against EXPO_PUBLIC_ADMIN_EMAIL before touching the database — see
+ *  src/lib/admin.ts for why this is a client-side gate, not a real security
+ *  boundary. */
+function assertAdmin(email: string | null | undefined) {
+  if (!isAdminEmail(email)) {
     throw new Error('Not authorized: admin access only.');
   }
 }
@@ -51,16 +51,16 @@ interface RawPendingReviewRow {
   is_anonymous: boolean;
   created_at: string;
   teachers: { name: string } | null;
-  users: { phone: string } | null;
+  users: { email: string } | null;
 }
 
-export async function fetchPendingReviews(adminPhone: string): Promise<AdminReview[]> {
-  assertAdmin(adminPhone);
+export async function fetchPendingReviews(adminEmail: string): Promise<AdminReview[]> {
+  assertAdmin(adminEmail);
   try {
     const primary = await supabase
       .from('reviews')
       .select(
-        'id, teaching_score, grading_score, attendance_score, comment, quality_flags, moderation_priority, reported, is_anonymous, created_at, teachers(name), users(phone)',
+        'id, teaching_score, grading_score, attendance_score, comment, quality_flags, moderation_priority, reported, is_anonymous, created_at, teachers(name), users(email)',
       )
       .eq('approved', false)
       .order('reported', { ascending: false })
@@ -72,7 +72,7 @@ export async function fetchPendingReviews(adminPhone: string): Promise<AdminRevi
       const fallback = await supabase
         .from('reviews')
         .select(
-          'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, teachers(name), users(phone)',
+          'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, teachers(name), users(email)',
         )
         .eq('approved', false)
         .order('created_at', { ascending: false });
@@ -91,7 +91,7 @@ export async function fetchPendingReviews(adminPhone: string): Promise<AdminRevi
       qualityFlags: r.quality_flags ?? [],
       moderationPriority: r.moderation_priority ?? 0,
       reported: Boolean(r.reported),
-      submittedBy: r.is_anonymous ? 'Anonymous' : (r.users?.phone ?? 'Anonymous'),
+      submittedBy: r.is_anonymous ? 'Anonymous' : (r.users?.email ?? 'Anonymous'),
       createdAt: formatDate(r.created_at),
     }));
   } catch (error) {
@@ -99,8 +99,8 @@ export async function fetchPendingReviews(adminPhone: string): Promise<AdminRevi
   }
 }
 
-export async function approveReview(adminPhone: string, reviewId: string): Promise<void> {
-  assertAdmin(adminPhone);
+export async function approveReview(adminEmail: string, reviewId: string): Promise<void> {
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('approveReview', { reviewId });
   }
@@ -112,8 +112,8 @@ export async function approveReview(adminPhone: string, reviewId: string): Promi
   }
 }
 
-export async function rejectReview(adminPhone: string, reviewId: string): Promise<void> {
-  assertAdmin(adminPhone);
+export async function rejectReview(adminEmail: string, reviewId: string): Promise<void> {
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('rejectReview', { reviewId });
   }
@@ -136,8 +136,8 @@ interface RawPendingUploadRow {
   departments: { name: string } | null;
 }
 
-export async function fetchPendingUploads(adminPhone: string): Promise<AdminUpload[]> {
-  assertAdmin(adminPhone);
+export async function fetchPendingUploads(adminEmail: string): Promise<AdminUpload[]> {
+  assertAdmin(adminEmail);
   try {
     const { data, error } = await supabase
       .from('uploads')
@@ -161,8 +161,8 @@ export async function fetchPendingUploads(adminPhone: string): Promise<AdminUplo
   }
 }
 
-export async function approveUpload(adminPhone: string, uploadId: string): Promise<void> {
-  assertAdmin(adminPhone);
+export async function approveUpload(adminEmail: string, uploadId: string): Promise<void> {
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('approveUpload', { uploadId });
   }
@@ -174,8 +174,8 @@ export async function approveUpload(adminPhone: string, uploadId: string): Promi
   }
 }
 
-export async function rejectUpload(adminPhone: string, uploadId: string): Promise<void> {
-  assertAdmin(adminPhone);
+export async function rejectUpload(adminEmail: string, uploadId: string): Promise<void> {
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('rejectUpload', { uploadId });
   }
@@ -187,8 +187,8 @@ export async function rejectUpload(adminPhone: string, uploadId: string): Promis
   }
 }
 
-export async function fetchAdminStats(adminPhone: string): Promise<AdminStats> {
-  assertAdmin(adminPhone);
+export async function fetchAdminStats(adminEmail: string): Promise<AdminStats> {
+  assertAdmin(adminEmail);
   try {
     const [
       departments,
@@ -289,8 +289,8 @@ interface RawReportedAnswerRow {
   questions: { title: string } | null;
 }
 
-export async function fetchReportedCommunity(adminPhone: string): Promise<AdminCommunityReport[]> {
-  assertAdmin(adminPhone);
+export async function fetchReportedCommunity(adminEmail: string): Promise<AdminCommunityReport[]> {
+  assertAdmin(adminEmail);
   try {
     const [questions, answers] = await Promise.all([
       supabase
@@ -339,10 +339,10 @@ export async function fetchReportedCommunity(adminPhone: string): Promise<AdminC
 }
 
 export async function dismissCommunityReport(
-  adminPhone: string,
+  adminEmail: string,
   report: AdminCommunityReport,
 ): Promise<void> {
-  assertAdmin(adminPhone);
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('dismissCommunityReport', { report });
   }
@@ -359,10 +359,10 @@ export async function dismissCommunityReport(
 }
 
 export async function hideCommunityItem(
-  adminPhone: string,
+  adminEmail: string,
   report: AdminCommunityReport,
 ): Promise<void> {
-  assertAdmin(adminPhone);
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('hideCommunityItem', { report });
   }
@@ -375,8 +375,8 @@ export async function hideCommunityItem(
   }
 }
 
-export async function fetchAdminDepartments(adminPhone: string): Promise<AdminDepartment[]> {
-  assertAdmin(adminPhone);
+export async function fetchAdminDepartments(adminEmail: string): Promise<AdminDepartment[]> {
+  assertAdmin(adminEmail);
   try {
     const { data, error } = await supabase
       .from('departments')
@@ -391,8 +391,8 @@ export async function fetchAdminDepartments(adminPhone: string): Promise<AdminDe
   }
 }
 
-export async function addDepartment(adminPhone: string, name: string): Promise<void> {
-  assertAdmin(adminPhone);
+export async function addDepartment(adminEmail: string, name: string): Promise<void> {
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('addDepartment', { name: sanitizeText(name) });
   }
@@ -407,8 +407,8 @@ export async function addDepartment(adminPhone: string, name: string): Promise<v
   }
 }
 
-export async function deleteDepartment(adminPhone: string, departmentId: string): Promise<void> {
-  assertAdmin(adminPhone);
+export async function deleteDepartment(adminEmail: string, departmentId: string): Promise<void> {
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('deleteDepartment', { departmentId });
   }
@@ -486,8 +486,8 @@ async function fetchAdminCourseMap(
   return coursesByTeacher;
 }
 
-export async function fetchAdminTeachers(adminPhone: string): Promise<AdminTeacher[]> {
-  assertAdmin(adminPhone);
+export async function fetchAdminTeachers(adminEmail: string): Promise<AdminTeacher[]> {
+  assertAdmin(adminEmail);
   try {
     const { data, error } = await supabase
       .from('teachers')
@@ -511,14 +511,14 @@ export async function fetchAdminTeachers(adminPhone: string): Promise<AdminTeach
 }
 
 export interface AddTeacherInput {
-  adminPhone: string;
+  adminEmail: string;
   name: string;
   departmentId: string;
   courseIds?: string[];
 }
 
 export async function addTeacher(input: AddTeacherInput): Promise<void> {
-  assertAdmin(input.adminPhone);
+  assertAdmin(input.adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('addTeacher', {
       name: sanitizeText(input.name),
@@ -555,8 +555,8 @@ export async function addTeacher(input: AddTeacherInput): Promise<void> {
   }
 }
 
-export async function fetchAdminCourses(adminPhone: string): Promise<AdminCourse[]> {
-  assertAdmin(adminPhone);
+export async function fetchAdminCourses(adminEmail: string): Promise<AdminCourse[]> {
+  assertAdmin(adminEmail);
   try {
     const { data, error } = await supabase
       .from('courses')
@@ -581,14 +581,14 @@ export async function fetchAdminCourses(adminPhone: string): Promise<AdminCourse
 }
 
 export interface AddCourseInput {
-  adminPhone: string;
+  adminEmail: string;
   name: string;
   code?: string;
   departmentId: string;
 }
 
 export async function addCourse(input: AddCourseInput): Promise<void> {
-  assertAdmin(input.adminPhone);
+  assertAdmin(input.adminEmail);
   const payload = {
     name: sanitizeText(input.name),
     code: input.code ? sanitizeText(input.code).toUpperCase() : null,
@@ -610,8 +610,8 @@ export async function addCourse(input: AddCourseInput): Promise<void> {
   }
 }
 
-export async function deleteCourse(adminPhone: string, courseId: string): Promise<void> {
-  assertAdmin(adminPhone);
+export async function deleteCourse(adminEmail: string, courseId: string): Promise<void> {
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('deleteCourse', { courseId });
   }
@@ -624,11 +624,11 @@ export async function deleteCourse(adminPhone: string, courseId: string): Promis
 }
 
 export async function assignTeacherCourse(
-  adminPhone: string,
+  adminEmail: string,
   teacherId: string,
   courseId: string,
 ): Promise<void> {
-  assertAdmin(adminPhone);
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('assignTeacherCourse', { teacherId, courseId });
   }
@@ -645,8 +645,8 @@ export async function assignTeacherCourse(
 /** Deletes the teacher along with their reviews (see schema.sql's ON DELETE
  *  CASCADE on reviews.teacher_id — plain deletion would otherwise fail for
  *  any teacher who already has reviews). */
-export async function deleteTeacher(adminPhone: string, teacherId: string): Promise<void> {
-  assertAdmin(adminPhone);
+export async function deleteTeacher(adminEmail: string, teacherId: string): Promise<void> {
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('deleteTeacher', { teacherId });
   }
@@ -664,15 +664,15 @@ interface RawSuggestionRow {
   department_id: string | null;
   created_at: string;
   departments: { name: string } | null;
-  users: { phone: string } | null;
+  users: { email: string } | null;
 }
 
-export async function fetchPendingTeacherSuggestions(adminPhone: string): Promise<TeacherSuggestion[]> {
-  assertAdmin(adminPhone);
+export async function fetchPendingTeacherSuggestions(adminEmail: string): Promise<TeacherSuggestion[]> {
+  assertAdmin(adminEmail);
   try {
     const { data, error } = await supabase
       .from('teacher_suggestions')
-      .select('id, name, department_id, created_at, departments(name), users(phone)')
+      .select('id, name, department_id, created_at, departments(name), users(email)')
       .eq('approved', false)
       .order('created_at', { ascending: false });
     if (error) throw error;
@@ -682,7 +682,7 @@ export async function fetchPendingTeacherSuggestions(adminPhone: string): Promis
       name: s.name,
       departmentId: s.department_id,
       departmentName: s.departments?.name ?? null,
-      suggestedBy: s.users?.phone ?? 'Unknown',
+      suggestedBy: s.users?.email ?? 'Unknown',
       createdAt: formatDate(s.created_at),
     }));
   } catch (error) {
@@ -695,10 +695,10 @@ export async function fetchPendingTeacherSuggestions(adminPhone: string): Promis
  *  read path in the app, unlike reviews/uploads, so there's nothing to gain
  *  from leaving an approved row behind). */
 export async function approveTeacherSuggestion(
-  adminPhone: string,
+  adminEmail: string,
   suggestion: TeacherSuggestion,
 ): Promise<void> {
-  assertAdmin(adminPhone);
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('approveTeacherSuggestion', { suggestion });
   }
@@ -726,8 +726,8 @@ export async function approveTeacherSuggestion(
   }
 }
 
-export async function rejectTeacherSuggestion(adminPhone: string, suggestionId: string): Promise<void> {
-  assertAdmin(adminPhone);
+export async function rejectTeacherSuggestion(adminEmail: string, suggestionId: string): Promise<void> {
+  assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
     return callAdminFunction<void>('rejectTeacherSuggestion', { suggestionId });
   }

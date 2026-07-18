@@ -15,12 +15,12 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-async function verifyAdminPhone(authHeader: string | null): Promise<void> {
+async function verifyAdminEmail(authHeader: string | null): Promise<void> {
   const token = authHeader?.replace(/^Bearer\s+/i, '');
   if (!token) throw new Error('Missing Firebase token.');
 
   const firebaseApiKey = requiredEnv('FIREBASE_API_KEY');
-  const adminPhone = requiredEnv('ADMIN_PHONE');
+  const adminEmail = requiredEnv('ADMIN_EMAIL');
   const response = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${firebaseApiKey}`,
     {
@@ -31,8 +31,8 @@ async function verifyAdminPhone(authHeader: string | null): Promise<void> {
   );
 
   const data = await response.json();
-  const phone = data?.users?.[0]?.phoneNumber;
-  if (!response.ok || phone !== adminPhone) {
+  const email = data?.users?.[0]?.email;
+  if (!response.ok || email !== adminEmail) {
     throw new Error('Not authorized.');
   }
 }
@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    await verifyAdminPhone(req.headers.get('Authorization'));
+    await verifyAdminEmail(req.headers.get('Authorization'));
 
     const { action, payload = {} } = await req.json();
     const supabase = createClient(

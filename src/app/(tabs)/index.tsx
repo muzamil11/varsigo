@@ -13,7 +13,8 @@ import {
   StateMessage,
   ThemeToggle,
 } from '@/components';
-import { upsertUserByPhone } from '@/features/auth/api';
+import { upsertUserByGoogle } from '@/features/auth/api';
+import { signOutGoogle } from '@/features/auth/google';
 import { fetchPapers } from '@/features/papers/api';
 import type { Paper } from '@/features/papers/data';
 import { PaperCard } from '@/features/papers/PaperCard';
@@ -56,7 +57,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const colors = useThemeColors();
   const userName = useAuthStore((s) => s.user?.name);
-  const userPhone = useAuthStore((s) => s.user?.phone);
+  const userFirebaseUid = useAuthStore((s) => s.user?.firebase_uid);
+  const userEmail = useAuthStore((s) => s.user?.email);
   const [query, setQuery] = useState('');
   const [allTeachers, setAllTeachers] = useState<TeacherListItem[]>([]);
   const [allPapers, setAllPapers] = useState<Paper[]>([]);
@@ -78,6 +80,7 @@ export default function HomeScreen() {
             // Firebase session isn't persisted anyway (see src/lib/firebase.ts) —
             // the app's own authStore below is the real "logged in" source of truth.
           }
+          await signOutGoogle();
           useAuthStore.getState().logout();
           router.replace('/login');
         },
@@ -96,7 +99,7 @@ export default function HomeScreen() {
 
     Alert.alert(
       'Delete account?',
-      'Your profile and phone link will be deleted. Approved reviews and uploads stay visible without your account attached.',
+      'Your profile and Google account link will be deleted. Approved reviews and uploads stay visible without your account attached.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -106,6 +109,7 @@ export default function HomeScreen() {
             try {
               await callDeleteAccountFunction();
               await signOut(firebaseAuth).catch(() => undefined);
+              await signOutGoogle();
               useAuthStore.getState().logout();
               router.replace('/login');
             } catch (error) {
@@ -125,8 +129,11 @@ export default function HomeScreen() {
     shouldShowSkeleton ? setLoading(true) : setRefreshing(true);
     setError(null);
     try {
-      if (userPhone) {
-        const currentUser = await upsertUserByPhone(userPhone);
+      if (userFirebaseUid && userEmail) {
+        const currentUser = await upsertUserByGoogle({
+          firebaseUid: userFirebaseUid,
+          email: userEmail,
+        });
         useAuthStore.getState().updateUser(currentUser);
       }
       const [teachers, papers] = await Promise.all([fetchTeachers(), fetchPapers()]);
@@ -138,7 +145,7 @@ export default function HomeScreen() {
     } finally {
       shouldShowSkeleton ? setLoading(false) : setRefreshing(false);
     }
-  }, [userPhone]);
+  }, [userFirebaseUid, userEmail]);
 
   useFocusEffect(
     useCallback(() => {
