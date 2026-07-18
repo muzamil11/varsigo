@@ -1,27 +1,45 @@
 {
   "expo": {
-    "name": "campuslens",
+    "name": "Varsigo",
     "slug": "campuslens",
+    "scheme": "varsigo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A0A0A"
     },
     "ios": {
+      "bundleIdentifier": "com.varsigo.app",
+      "buildNumber": "1",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.varsigo.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
+        "backgroundColor": "#6366F1"
+      },
+      "edgeToEdgeEnabled": true
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "98fb1bd4-7a2a-4ef4-9ea2-a092da3157db"
+      }
     }
   }
 }

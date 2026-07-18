@@ -5,6 +5,7 @@ node_modules/
 
 # Expo
 .expo/
+/.expo/
 dist/
 web-build/
 
@@ -23,13 +24,23 @@ web-build/
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
+
+# Claude Code local state
+.claude/.claude-*-tmp/
 
 # macOS
 .DS_Store
 *.pem
 
 # local env files
+.env.local
 .env*.local
+/.env.local
+/.env*.local
+
+# Supabase CLI local link/cache state
+supabase/.temp/
 
 # typescript
 *.tsbuildinfo

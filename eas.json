@@ -1,0 +1,47 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://byiwoenmomytoodgprow.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5aXdvZW5tb215dG9vZGdwcm93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MDQ5MDUsImV4cCI6MjA5OTI4MDkwNX0.LYZKWA4bbOZL6OXXdf_2hur4VRMB07ScxwPEGPJfDqg",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBJ8ta1s-chQ6BomigmPP3tsAgawGzBz2Y",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "campuslens-6ed2b",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:170326285967:web:2e24fee4d3f1a049a21afa",
+        "EXPO_PUBLIC_ADMIN_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/admin-action",
+        "EXPO_PUBLIC_DELETE_ACCOUNT_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/delete-account",
+        "EXPO_PUBLIC_REPORT_REVIEW_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/report-review",
+        "EXPO_PUBLIC_COMMUNITY_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/community-action",
+        "EXPO_PUBLIC_ADMIN_PHONE": "+923337001837"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://byiwoenmomytoodgprow.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5aXdvZW5tb215dG9vZGdwcm93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MDQ5MDUsImV4cCI6MjA5OTI4MDkwNX0.LYZKWA4bbOZL6OXXdf_2hur4VRMB07ScxwPEGPJfDqg",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBJ8ta1s-chQ6BomigmPP3tsAgawGzBz2Y",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "campuslens-6ed2b",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:170326285967:web:2e24fee4d3f1a049a21afa",
+        "EXPO_PUBLIC_ADMIN_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/admin-action",
+        "EXPO_PUBLIC_DELETE_ACCOUNT_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/delete-account",
+        "EXPO_PUBLIC_REPORT_REVIEW_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/report-review",
+        "EXPO_PUBLIC_COMMUNITY_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/community-action",
+        "EXPO_PUBLIC_ADMIN_PHONE": "+923337001837"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

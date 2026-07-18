@@ -1,0 +1,43 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+
+import { isAdminPhone } from '@/lib/admin';
+import type { UserRow } from '@/lib/database.types';
+
+interface AuthState {
+  firebaseUid: string | null;
+  user: UserRow | null;
+  hasHydrated: boolean;
+  isAuthenticated: () => boolean;
+  isAdmin: () => boolean;
+  setUser: (firebaseUid: string, user: UserRow) => void;
+  updateUser: (user: UserRow) => void;
+  logout: () => void;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      firebaseUid: null,
+      user: null,
+      hasHydrated: false,
+      isAuthenticated: () => Boolean(get().firebaseUid && get().user),
+      isAdmin: () => isAdminPhone(get().user?.phone),
+      setUser: (firebaseUid, user) => set({ firebaseUid, user }),
+      updateUser: (user) => set({ user }),
+      logout: () => set({ firebaseUid: null, user: null }),
+    }),
+    {
+      name: 'campuslens-auth',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ firebaseUid: state.firebaseUid, user: state.user }),
+    },
+  ),
+);
+
+// Lets the splash screen tell "still loading from disk" apart from "loaded,
+// and there's no user" before deciding whether to redirect to login or tabs.
+useAuthStore.persist.onFinishHydration(() => {
+  useAuthStore.setState({ hasHydrated: true });
+});

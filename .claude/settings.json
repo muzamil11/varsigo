@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(where git *)",
+      "Bash(git --version)",
+      "WebFetch(domain:expo.dev)",
+      "WebFetch(domain:docs.expo.dev)"
+    ]
+  },
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   }

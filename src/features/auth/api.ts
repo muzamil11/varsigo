@@ -1,0 +1,45 @@
+import { sanitizeText } from '@/lib/sanitize';
+import { supabase, toFriendlyError } from '@/lib/supabase';
+import type { UserRow } from '@/lib/database.types';
+
+/** Creates the users row on first login, or fetches the existing one by phone. */
+export async function upsertUserByPhone(phone: string): Promise<UserRow> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .upsert({ phone }, { onConflict: 'phone', ignoreDuplicates: false })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as UserRow;
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
+/** Saves the display name collected right after first login. */
+export async function updateUserName(userId: string, name: string): Promise<UserRow> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ name: sanitizeText(name) })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as UserRow;
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
+export async function deleteUserRow(userId: string): Promise<void> {
+  try {
+    const { error } = await supabase.from('users').delete().eq('id', userId);
+    if (error) throw error;
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
