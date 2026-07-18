@@ -1,6 +1,6 @@
 import { sanitizeText } from '@/lib/sanitize';
 import { supabase, toFriendlyError } from '@/lib/supabase';
-import { callCommunityFunction } from '@/lib/communityFunction';
+import { callCommunityFunction, isCommunityFunctionConfigured } from '@/lib/communityFunction';
 import { analyzeReviewQuality } from '@/features/teachers/quality';
 import type { AnswerItem, QuestionDetail, QuestionListItem } from './data';
 
@@ -169,6 +169,15 @@ export async function submitQuestion(input: {
   departmentId: string | null;
   isAnonymous: boolean;
 }): Promise<void> {
+  if (isCommunityFunctionConfigured()) {
+    return callCommunityFunction<void>('submitQuestion', {
+      title: input.title,
+      body: input.body,
+      departmentId: input.departmentId,
+      isAnonymous: input.isAnonymous,
+    });
+  }
+
   try {
     const title = sanitizeText(input.title);
     const body = sanitizeText(input.body);
@@ -194,6 +203,14 @@ export async function submitAnswer(input: {
   body: string;
   isAnonymous: boolean;
 }): Promise<void> {
+  if (isCommunityFunctionConfigured()) {
+    return callCommunityFunction<void>('submitAnswer', {
+      questionId: input.questionId,
+      body: input.body,
+      isAnonymous: input.isAnonymous,
+    });
+  }
+
   try {
     const body = sanitizeText(input.body);
     const quality = analyzeReviewQuality(body);

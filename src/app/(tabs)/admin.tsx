@@ -58,6 +58,15 @@ import { useThemeColors } from '@/store/themeStore';
 
 type Segment = 'reviews' | 'uploads' | 'teachers' | 'community';
 
+async function loadAdminResource<T>(name: string, request: Promise<T>): Promise<T> {
+  try {
+    return await request;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Something went wrong.';
+    throw new Error(`Could not load admin ${name}: ${message}`);
+  }
+}
+
 function StatCard({ label, value, accent = false }: { label: string; value?: number; accent?: boolean }) {
   return (
     <Card className="min-w-[30%] flex-1 items-start">
@@ -90,6 +99,7 @@ export default function AdminScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const segmentOpacity = useRef(new Animated.Value(1)).current;
   const hasLoaded = useRef(false);
 
@@ -98,7 +108,32 @@ export default function AdminScreen() {
     const shouldShowSkeleton = !isRefresh && !hasLoaded.current;
     shouldShowSkeleton ? setLoading(true) : setRefreshing(true);
     setError(null);
+    setWarning(null);
     try {
+      const results = await Promise.allSettled([
+        loadAdminResource('stats', fetchAdminStats(user.phone)),
+        loadAdminResource('reviews', fetchPendingReviews(user.phone)),
+        loadAdminResource('uploads', fetchPendingUploads(user.phone)),
+        loadAdminResource('departments', fetchAdminDepartments(user.phone)),
+        loadAdminResource('courses', fetchAdminCourses(user.phone)),
+        loadAdminResource('teachers', fetchAdminTeachers(user.phone)),
+        loadAdminResource('teacher suggestions', fetchPendingTeacherSuggestions(user.phone)),
+        loadAdminResource('community reports', fetchReportedCommunity(user.phone)),
+        loadAdminResource('department list', fetchDepartments()),
+      ] as const);
+
+      const failures = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+      if (failures.length > 0) {
+        console.error('[admin] partial load failed', failures.map((failure) => failure.reason));
+        const messages = failures.map((failure) =>
+          failure.reason instanceof Error ? failure.reason.message : 'Could not load admin data.',
+        );
+        if (!hasLoaded.current && failures.length === results.length) {
+          throw new Error(messages[0] ?? 'Something went wrong.');
+        }
+        setWarning(messages.join('\n'));
+      }
+
       const [
         statsResult,
         reviewsResult,
@@ -109,29 +144,20 @@ export default function AdminScreen() {
         suggestionsResult,
         communityResult,
         deptResult,
-      ] =
-        await Promise.all([
-          fetchAdminStats(user.phone),
-          fetchPendingReviews(user.phone),
-          fetchPendingUploads(user.phone),
-          fetchAdminDepartments(user.phone),
-          fetchAdminCourses(user.phone),
-          fetchAdminTeachers(user.phone),
-          fetchPendingTeacherSuggestions(user.phone),
-          fetchReportedCommunity(user.phone),
-          fetchDepartments(),
-        ]);
-      setStats(statsResult);
-      setReviews(reviewsResult);
-      setUploads(uploadsResult);
-      setAdminDepartments(adminDepartmentsResult);
-      setAdminCourses(coursesResult);
-      setAdminTeachers(teachersResult);
-      setTeacherSuggestions(suggestionsResult);
-      setCommunityReports(communityResult);
-      setDepartments(deptResult);
+      ] = results;
+
+      if (statsResult.status === 'fulfilled') setStats(statsResult.value);
+      if (reviewsResult.status === 'fulfilled') setReviews(reviewsResult.value);
+      if (uploadsResult.status === 'fulfilled') setUploads(uploadsResult.value);
+      if (adminDepartmentsResult.status === 'fulfilled') setAdminDepartments(adminDepartmentsResult.value);
+      if (coursesResult.status === 'fulfilled') setAdminCourses(coursesResult.value);
+      if (teachersResult.status === 'fulfilled') setAdminTeachers(teachersResult.value);
+      if (suggestionsResult.status === 'fulfilled') setTeacherSuggestions(suggestionsResult.value);
+      if (communityResult.status === 'fulfilled') setCommunityReports(communityResult.value);
+      if (deptResult.status === 'fulfilled') setDepartments(deptResult.value);
       hasLoaded.current = true;
     } catch (err) {
+      console.error('[admin] load failed', err);
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       shouldShowSkeleton ? setLoading(false) : setRefreshing(false);
@@ -482,11 +508,17 @@ export default function AdminScreen() {
         />
       ) : (
         <Animated.View style={{ flex: 1, opacity: segmentOpacity }}>
+          {warning && (
+            <View className="mx-4 mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2">
+              <Text className="text-xs text-red-700 dark:text-red-300">{warning}</Text>
+            </View>
+          )}
           {segment === 'reviews' ? (
             <FlatList
               data={reviews}
               keyExtractor={(r) => r.id}
               contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+              keyboardDismissMode="on-drag"
               refreshing={refreshing}
               onRefresh={() => load(true)}
               ItemSeparatorComponent={() => (
@@ -510,6 +542,7 @@ export default function AdminScreen() {
               data={uploads}
               keyExtractor={(u) => u.id}
               contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+              keyboardDismissMode="on-drag"
               refreshing={refreshing}
               onRefresh={() => load(true)}
               ItemSeparatorComponent={() => (
@@ -552,6 +585,7 @@ export default function AdminScreen() {
               data={communityReports}
               keyExtractor={(item) => `${item.kind}-${item.id}`}
               contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+              keyboardDismissMode="on-drag"
               refreshing={refreshing}
               onRefresh={() => load(true)}
               renderItem={({ item, index }) => (

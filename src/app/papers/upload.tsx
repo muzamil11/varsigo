@@ -187,6 +187,7 @@ export default function UploadPaperScreen() {
         className="flex-1 px-4"
         contentContainerStyle={{ paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <Card className="mt-4">
           <Text className="mb-2 text-sm font-medium text-muted dark:text-muted-dark">Title</Text>

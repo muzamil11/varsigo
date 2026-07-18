@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.110.2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.110.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,6 +9,41 @@ function requiredEnv(name: string): string {
   const value = Deno.env.get(name);
   if (!value) throw new Error(`Missing ${name}`);
   return value;
+}
+
+function sanitizeText(input: unknown): string {
+  return String(input ?? '').trim().replace(/<[^>]*>/g, '');
+}
+
+function analyzeQuality(input: string): { flags: string[]; priority: number } {
+  const normalized = input
+    .toLowerCase()
+    .replace(/<[^>]*>/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+  const flags = new Set<string>();
+
+  if (normalized.length < 20) flags.add('thin_comment');
+  if (/(.)\1{5,}/i.test(input)) flags.add('repeated_characters');
+  if (input.length >= 20) {
+    const letters = input.replace(/[^a-z]/gi, '');
+    const uppercase = letters.replace(/[^A-Z]/g, '');
+    if (letters.length >= 12 && uppercase.length / letters.length > 0.7) {
+      flags.add('mostly_caps');
+    }
+  }
+  if (['bekar', 'fazool', 'hate', 'idiot', 'stupid', 'useless', 'worst'].some((word) => normalized.includes(word))) {
+    flags.add('possible_abuse');
+  }
+
+  let priority = 0;
+  if (flags.has('possible_abuse')) priority += 60;
+  if (flags.has('mostly_caps')) priority += 20;
+  if (flags.has('repeated_characters')) priority += 20;
+  if (flags.has('thin_comment')) priority += 10;
+
+  return { flags: [...flags], priority };
 }
 
 async function getVerifiedPhone(authHeader: string | null): Promise<string> {
@@ -30,7 +65,7 @@ async function getVerifiedPhone(authHeader: string | null): Promise<string> {
   return phone;
 }
 
-async function getOrCreateUserId(supabase: ReturnType<typeof createClient>, phone: string): Promise<string> {
+async function getOrCreateUserId(supabase: SupabaseClient, phone: string): Promise<string> {
   const { data, error } = await supabase
     .from('users')
     .upsert({ phone }, { onConflict: 'phone', ignoreDuplicates: false })
@@ -40,11 +75,21 @@ async function getOrCreateUserId(supabase: ReturnType<typeof createClient>, phon
   return data.id;
 }
 
+async function getOrCreateUserRow(supabase: SupabaseClient, phone: string) {
+  const { data, error } = await supabase
+    .from('users')
+    .upsert({ phone }, { onConflict: 'phone', ignoreDuplicates: false })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 async function updateCount(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   table: 'questions' | 'answers',
   id: string,
-  column: 'upvote_count' | 'reported_count',
+  column: 'upvote_count' | 'reported_count' | 'answer_count',
   count: number,
   extra: Record<string, unknown> = {},
 ) {
@@ -66,6 +111,140 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } },
     );
     const userId = await getOrCreateUserId(supabase, phone);
+
+    if (action === 'getOrCreateUser') {
+      const user = await getOrCreateUserRow(supabase, phone);
+      return Response.json({ data: user }, { headers: corsHeaders });
+    }
+
+    if (action === 'updateUserName') {
+      const name = sanitizeText(payload.name);
+      if (name.length < 1) throw new Error('Name is required.');
+
+      const { data, error } = await supabase
+        .from('users')
+        .update({ name })
+        .eq('id', userId)
+        .select()
+        .single();
+      if (error) throw error;
+
+      return Response.json({ data }, { headers: corsHeaders });
+    }
+
+    if (action === 'submitQuestion') {
+      const title = sanitizeText(payload.title);
+      const body = sanitizeText(payload.body);
+      if (title.length < 12) throw new Error('Question title is too short.');
+      const quality = analyzeQuality(`${title} ${body}`);
+
+      const { error } = await supabase.from('questions').insert({
+        user_id: userId,
+        title,
+        body: body || null,
+        department_id: payload.departmentId ?? null,
+        is_anonymous: Boolean(payload.isAnonymous),
+        quality_flags: quality.flags,
+        moderation_priority: quality.priority,
+      });
+      if (error) throw error;
+
+      return Response.json({ data: null }, { headers: corsHeaders });
+    }
+
+    if (action === 'submitTeacherSuggestion') {
+      const name = sanitizeText(payload.name);
+      const departmentId = payload.departmentId;
+      if (name.length < 2) throw new Error('Teacher name is too short.');
+      if (!departmentId) throw new Error('Choose a department.');
+
+      const { count, error: duplicateError } = await supabase
+        .from('teacher_suggestions')
+        .select('id', { count: 'exact', head: true })
+        .ilike('name', name)
+        .eq('department_id', departmentId)
+        .eq('approved', false);
+      if (duplicateError) throw duplicateError;
+      if ((count ?? 0) > 0) {
+        throw new Error('This teacher has already been suggested for that department.');
+      }
+
+      const { error } = await supabase.from('teacher_suggestions').insert({
+        name,
+        department_id: departmentId,
+        suggested_by: userId,
+        approved: false,
+      });
+      if (error) throw error;
+
+      return Response.json({ data: null }, { headers: corsHeaders });
+    }
+
+    if (action === 'submitPaperUpload') {
+      const title = sanitizeText(payload.title);
+      const subject = sanitizeText(payload.subject);
+      const kind = payload.kind;
+      const year = payload.year === null || payload.year === undefined ? null : Number(payload.year);
+      const fileUrl = String(payload.fileUrl ?? '');
+      const fileUrls: string[] = Array.isArray(payload.fileUrls) ? payload.fileUrls.map(String) : [];
+      const publicBucketPrefix = `${requiredEnv('SUPABASE_URL')}/storage/v1/object/public/papers/`;
+
+      if (!title) throw new Error('Title is required.');
+      if (!subject) throw new Error('Subject is required.');
+      if (kind !== 'past_paper' && kind !== 'notes') throw new Error('Choose a valid upload type.');
+      if (year !== null && (!Number.isInteger(year) || year < 1900 || year > 2100)) {
+        throw new Error('Enter a valid year.');
+      }
+      if (!fileUrl.startsWith(publicBucketPrefix) || fileUrls.length === 0) {
+        throw new Error('Invalid uploaded file URL.');
+      }
+      if (fileUrls.some((url) => !url.startsWith(publicBucketPrefix))) {
+        throw new Error('Invalid uploaded file URL.');
+      }
+
+      const { error } = await supabase.from('uploads').insert({
+        user_id: userId,
+        title,
+        subject,
+        department_id: payload.departmentId ?? null,
+        year,
+        type: kind,
+        file_url: fileUrl,
+        file_urls: fileUrls,
+        approved: false,
+      });
+      if (error) throw error;
+
+      return Response.json({ data: null }, { headers: corsHeaders });
+    }
+
+    if (action === 'submitAnswer') {
+      const questionId = payload.questionId;
+      const body = sanitizeText(payload.body);
+      if (!questionId) throw new Error('Missing question id.');
+      if (body.length < 8) throw new Error('Answer is too short.');
+      const quality = analyzeQuality(body);
+
+      const { error: insertError } = await supabase.from('answers').insert({
+        question_id: questionId,
+        user_id: userId,
+        body,
+        is_anonymous: Boolean(payload.isAnonymous),
+        quality_flags: quality.flags,
+        moderation_priority: quality.priority,
+      });
+      if (insertError) throw insertError;
+
+      const countResult = await supabase
+        .from('answers')
+        .select('id', { count: 'exact', head: true })
+        .eq('question_id', questionId)
+        .eq('status', 'active');
+      if (countResult.error) throw countResult.error;
+      await updateCount(supabase, 'questions', questionId, 'answer_count', countResult.count ?? 0);
+
+      return Response.json({ data: null }, { headers: corsHeaders });
+    }
 
     if (action === 'toggleQuestionVote' || action === 'toggleAnswerVote') {
       const isQuestion = action === 'toggleQuestionVote';

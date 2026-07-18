@@ -191,6 +191,7 @@ export default function HomeScreen() {
         className="flex-1 px-4"
         contentContainerStyle={{ paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

@@ -1,6 +1,7 @@
 import { decode as decodeBase64 } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
 
+import { callCommunityFunction, isCommunityFunctionConfigured } from '@/lib/communityFunction';
 import { sanitizeText } from '@/lib/sanitize';
 import { PAPERS_BUCKET, supabase, toFriendlyError } from '@/lib/supabase';
 import type { Paper, PaperKind } from './data';
@@ -103,10 +104,19 @@ export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 export const MAX_UPLOAD_TOTAL_BYTES = 30 * 1024 * 1024;
 export const MAX_IMAGE_PAGES = 10;
 
+async function removeUploadedFiles(paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  const { error } = await supabase.storage.from(PAPERS_BUCKET).remove(paths);
+  if (error) {
+    console.warn('[papers] cleanup failed after upload error', error.message);
+  }
+}
+
 /** Uploads the file (PDF as-is, images pre-compressed by the caller) to the
  *  "papers" storage bucket, then inserts the metadata row with approved:
  *  false — it appears in Papers only after moderation. */
 export async function uploadPaper(input: UploadPaperInput): Promise<void> {
+  const uploadedPaths: string[] = [];
   try {
     if (input.files.length === 0) {
       throw new Error('Choose a PDF or at least one image.');
@@ -127,24 +137,38 @@ export async function uploadPaper(input: UploadPaperInput): Promise<void> {
         .from(PAPERS_BUCKET)
         .upload(path, bytes, { contentType: contentTypeFor(safeName) });
       if (uploadError) throw uploadError;
+      uploadedPaths.push(path);
 
       const { data: publicUrlData } = supabase.storage.from(PAPERS_BUCKET).getPublicUrl(path);
       uploadedUrls.push(publicUrlData.publicUrl);
     }
 
-    const { error: insertError } = await supabase.from('uploads').insert({
-      user_id: input.userId,
-      title: sanitizeText(input.title),
-      subject: sanitizeText(input.subject),
-      department_id: input.departmentId,
-      year: input.year,
-      type: input.kind,
-      file_url: uploadedUrls[0],
-      file_urls: uploadedUrls,
-      approved: false,
-    });
-    if (insertError) throw insertError;
+    if (isCommunityFunctionConfigured()) {
+      await callCommunityFunction<void>('submitPaperUpload', {
+        title: input.title,
+        subject: input.subject,
+        departmentId: input.departmentId,
+        year: input.year,
+        kind: input.kind,
+        fileUrl: uploadedUrls[0],
+        fileUrls: uploadedUrls,
+      });
+    } else {
+      const { error: insertError } = await supabase.from('uploads').insert({
+        user_id: input.userId,
+        title: sanitizeText(input.title),
+        subject: sanitizeText(input.subject),
+        department_id: input.departmentId,
+        year: input.year,
+        type: input.kind,
+        file_url: uploadedUrls[0],
+        file_urls: uploadedUrls,
+        approved: false,
+      });
+      if (insertError) throw insertError;
+    }
   } catch (error) {
+    await removeUploadedFiles(uploadedPaths);
     throw new Error(toFriendlyError(error));
   }
 }

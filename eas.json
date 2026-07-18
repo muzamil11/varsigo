@@ -20,7 +20,8 @@
         "EXPO_PUBLIC_REPORT_REVIEW_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/report-review",
         "EXPO_PUBLIC_COMMUNITY_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/community-action",
         "EXPO_PUBLIC_ADMIN_PHONE": "+923337001837"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
@@ -38,7 +39,8 @@
         "EXPO_PUBLIC_REPORT_REVIEW_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/report-review",
         "EXPO_PUBLIC_COMMUNITY_FUNCTION_URL": "https://byiwoenmomytoodgprow.supabase.co/functions/v1/community-action",
         "EXPO_PUBLIC_ADMIN_PHONE": "+923337001837"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {

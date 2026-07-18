@@ -140,6 +140,7 @@ export function AdminTeachersPanel({
       keyExtractor={(t) => t.id}
       contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       refreshing={refreshing}
       onRefresh={onRefresh}
       ItemSeparatorComponent={() => <View className="mb-3 h-px bg-line dark:bg-line-dark" />}

@@ -9,7 +9,10 @@ export function isReportReviewFunctionConfigured(): boolean {
   );
 }
 
-export async function callReportReviewFunction(reviewId: string): Promise<void> {
+export async function callReviewFunction<T>(
+  action: string,
+  payload: Record<string, unknown>,
+): Promise<T> {
   if (!isReportReviewFunctionConfigured() || !reportReviewFunctionUrl) {
     throw new Error('Report review function is not configured.');
   }
@@ -25,10 +28,15 @@ export async function callReportReviewFunction(reviewId: string): Promise<void> 
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ reviewId }),
+    body: JSON.stringify({ action, payload }),
   });
-  const result = (await response.json().catch(() => null)) as { error?: string } | null;
+  const result = (await response.json().catch(() => null)) as { data?: T; error?: string } | null;
   if (!response.ok) {
-    throw new Error(result?.error ?? 'Could not report review.');
+    throw new Error(result?.error ?? 'Review request failed.');
   }
+  return result?.data as T;
+}
+
+export async function callReportReviewFunction(reviewId: string): Promise<void> {
+  return callReviewFunction<void>('reportReview', { reviewId });
 }

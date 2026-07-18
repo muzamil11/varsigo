@@ -1,5 +1,7 @@
 import { sanitizeText } from '@/lib/sanitize';
+import { callCommunityFunction, isCommunityFunctionConfigured } from '@/lib/communityFunction';
 import {
+  callReviewFunction,
   callReportReviewFunction,
   isReportReviewFunctionConfigured,
 } from '@/lib/reviewFunction';
@@ -242,6 +244,17 @@ export interface SubmitReviewInput {
  *  Rejects once the user has already posted MAX_REVIEWS_PER_DAY reviews
  *  today, to keep one person from flooding a teacher's review list. */
 export async function submitReview(input: SubmitReviewInput): Promise<void> {
+  if (isReportReviewFunctionConfigured()) {
+    return callReviewFunction<void>('submitReview', {
+      teacherId: input.teacherId,
+      teachingScore: input.teachingScore,
+      gradingScore: input.gradingScore,
+      attendanceScore: input.attendanceScore,
+      comment: input.comment,
+      isAnonymous: input.isAnonymous,
+    });
+  }
+
   try {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
@@ -323,6 +336,13 @@ export interface SuggestTeacherInput {
  *  Teachers only, and only becomes a real teacher once an admin approves it
  *  (see src/features/admin/api.ts's approveTeacherSuggestion). */
 export async function suggestTeacher(input: SuggestTeacherInput): Promise<void> {
+  if (isCommunityFunctionConfigured()) {
+    return callCommunityFunction<void>('submitTeacherSuggestion', {
+      name: input.name,
+      departmentId: input.departmentId,
+    });
+  }
+
   try {
     const { error } = await supabase.from('teacher_suggestions').insert({
       name: sanitizeText(input.name),

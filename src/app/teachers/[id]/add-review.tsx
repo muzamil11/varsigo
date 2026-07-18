@@ -115,6 +115,7 @@ export default function AddReviewScreen() {
         className="flex-1 px-4"
         contentContainerStyle={{ paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <Card className="mt-4">
           <Text className="mb-4 text-base font-semibold text-foreground dark:text-foreground-dark">

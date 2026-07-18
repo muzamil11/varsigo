@@ -1,9 +1,14 @@
 import { sanitizeText } from '@/lib/sanitize';
+import { callCommunityFunction, isCommunityFunctionConfigured } from '@/lib/communityFunction';
 import { supabase, toFriendlyError } from '@/lib/supabase';
 import type { UserRow } from '@/lib/database.types';
 
 /** Creates the users row on first login, or fetches the existing one by phone. */
 export async function upsertUserByPhone(phone: string): Promise<UserRow> {
+  if (isCommunityFunctionConfigured()) {
+    return callCommunityFunction<UserRow>('getOrCreateUser', { phone });
+  }
+
   try {
     const { data, error } = await supabase
       .from('users')
@@ -20,6 +25,10 @@ export async function upsertUserByPhone(phone: string): Promise<UserRow> {
 
 /** Saves the display name collected right after first login. */
 export async function updateUserName(userId: string, name: string): Promise<UserRow> {
+  if (isCommunityFunctionConfigured()) {
+    return callCommunityFunction<UserRow>('updateUserName', { name });
+  }
+
   try {
     const { data, error } = await supabase
       .from('users')

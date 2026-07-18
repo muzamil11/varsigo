@@ -4,6 +4,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -11,6 +12,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 
@@ -223,9 +225,14 @@ export default function TeachersScreen() {
         </ScrollView>
       </View>
 
-      <View className="mt-2 flex-row items-center px-4">
-        <Text className="mr-2 text-xs text-muted dark:text-muted-dark">Sort by</Text>
-        <View className="flex-row">
+      <View className="mt-2 flex-row items-center">
+        <Text className="ml-4 mr-2 text-xs text-muted dark:text-muted-dark">Sort by</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingRight: 16 }}
+          keyboardShouldPersistTaps="handled"
+        >
           {SORT_OPTIONS.map((opt) => (
             <Chip
               key={opt.value}
@@ -234,7 +241,7 @@ export default function TeachersScreen() {
               onPress={() => setSortBy(opt.value)}
             />
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       {loading ? (
@@ -252,6 +259,7 @@ export default function TeachersScreen() {
           keyExtractor={(t) => t.id}
           contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           refreshing={refreshing}
           onRefresh={() => load(selectedDept.id, selectedCourse.id, true)}
           ItemSeparatorComponent={() => <View className="mb-3 h-px bg-line dark:bg-line-dark" />}
@@ -293,35 +301,37 @@ export default function TeachersScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           className="flex-1 justify-end"
         >
-          <View className="rounded-t-3xl bg-background px-4 pb-8 pt-6 dark:bg-background-dark">
-            <Text className="mb-4 text-lg font-semibold text-foreground dark:text-foreground-dark">
-              Suggest a Teacher
-            </Text>
-            <TextInput
-              value={suggestName}
-              onChangeText={setSuggestName}
-              placeholder="Teacher name"
-              placeholderTextColor={colors.textMuted}
-              className="mb-3 h-12 rounded-xl border border-line bg-card px-3 text-base text-foreground dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
-            />
-            <View className="mb-4 flex-row flex-wrap">
-              {departments.map((d) => (
-                <Chip
-                  key={d.id}
-                  label={d.name}
-                  selected={suggestDeptId === d.id}
-                  onPress={() => setSuggestDeptId(d.id)}
-                />
-              ))}
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View className="rounded-t-3xl bg-background px-4 pb-8 pt-6 dark:bg-background-dark">
+              <Text className="mb-4 text-lg font-semibold text-foreground dark:text-foreground-dark">
+                Suggest a Teacher
+              </Text>
+              <TextInput
+                value={suggestName}
+                onChangeText={setSuggestName}
+                placeholder="Teacher name"
+                placeholderTextColor={colors.textMuted}
+                className="mb-3 h-12 rounded-xl border border-line bg-card px-3 text-base text-foreground dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
+              />
+              <View className="mb-4 flex-row flex-wrap">
+                {departments.map((d) => (
+                  <Chip
+                    key={d.id}
+                    label={d.name}
+                    selected={suggestDeptId === d.id}
+                    onPress={() => setSuggestDeptId(d.id)}
+                  />
+                ))}
+              </View>
+              <Button
+                label="Submit Suggestion"
+                onPress={handleSuggestSubmit}
+                disabled={!suggestName.trim() || !suggestDeptId}
+                loading={suggestSubmitting}
+              />
+              <Button label="Cancel" variant="ghost" onPress={closeSuggestModal} className="mt-3" />
             </View>
-            <Button
-              label="Submit Suggestion"
-              onPress={handleSuggestSubmit}
-              disabled={!suggestName.trim() || !suggestDeptId}
-              loading={suggestSubmitting}
-            />
-            <Button label="Cancel" variant="ghost" onPress={closeSuggestModal} className="mt-3" />
-          </View>
+          </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </Modal>
     </Screen>

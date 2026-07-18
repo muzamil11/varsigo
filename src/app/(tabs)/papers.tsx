@@ -15,10 +15,14 @@ import {
   SearchBar,
   StateMessage,
 } from '@/components';
+import { fetchDepartments } from '@/features/departments/api';
+import type { Department } from '@/features/departments/types';
 import { fetchPapers } from '@/features/papers/api';
 import { getPaperFileType, PAPER_YEARS, type Paper, type PaperKind } from '@/features/papers/data';
 import { PaperCard } from '@/features/papers/PaperCard';
 import { useThemeColors } from '@/store/themeStore';
+
+const ALL_DEPARTMENTS: Department = { id: 'all', name: 'All' };
 
 const KIND_OPTIONS: { value: 'All' | PaperKind; label: string }[] = [
   { value: 'All', label: 'All' },
@@ -30,9 +34,11 @@ export default function PapersScreen() {
   const router = useRouter();
   const colors = useThemeColors();
   const [query, setQuery] = useState('');
+  const [selectedDept, setSelectedDept] = useState<Department>(ALL_DEPARTMENTS);
   const [year, setYear] = useState<(typeof PAPER_YEARS)[number]>('All');
   const [kind, setKind] = useState<'All' | PaperKind>('All');
 
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,19 +54,23 @@ export default function PapersScreen() {
     shouldShowSkeleton ? setLoading(true) : setRefreshing(true);
     setError(null);
     try {
-      setPapers(
-        await fetchPapers({
+      const [departmentList, paperList] = await Promise.all([
+        fetchDepartments(),
+        fetchPapers({
+          departmentId: selectedDept.id === 'all' ? undefined : selectedDept.id,
           year: year === 'All' ? undefined : Number(year),
           kind: kind === 'All' ? undefined : kind,
         }),
-      );
+      ]);
+      setDepartments(departmentList);
+      setPapers(paperList);
       hasLoaded.current = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       shouldShowSkeleton ? setLoading(false) : setRefreshing(false);
     }
-  }, [year, kind]);
+  }, [selectedDept.id, year, kind]);
 
   useFocusEffect(
     useCallback(() => {
@@ -176,6 +186,24 @@ export default function PapersScreen() {
           contentContainerStyle={{ paddingHorizontal: 16 }}
           keyboardShouldPersistTaps="handled"
         >
+          {[ALL_DEPARTMENTS, ...departments].map((department) => (
+            <Chip
+              key={department.id}
+              label={department.name}
+              selected={selectedDept.id === department.id}
+              onPress={() => setSelectedDept(department)}
+            />
+          ))}
+        </ScrollView>
+      </View>
+
+      <View className="mt-2">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          keyboardShouldPersistTaps="handled"
+        >
           {KIND_OPTIONS.map((k) => (
             <Chip
               key={k.value}
@@ -214,6 +242,7 @@ export default function PapersScreen() {
           keyExtractor={(p) => p.id}
           contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           refreshing={refreshing}
           onRefresh={() => load(true)}
           ItemSeparatorComponent={() => <View className="mb-3 h-px bg-line dark:bg-line-dark" />}

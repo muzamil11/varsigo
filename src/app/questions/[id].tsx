@@ -193,7 +193,12 @@ export default function QuestionDetailScreen() {
   return (
     <Screen>
       {header}
-      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 24 }}>
+      <ScrollView
+        className="flex-1 px-4"
+        contentContainerStyle={{ paddingBottom: 24 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         <Card className="mt-4">
           <View className="flex-row items-start justify-between">
             <Text className="mr-3 flex-1 text-xl font-bold text-foreground dark:text-foreground-dark">
