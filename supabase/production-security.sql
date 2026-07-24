@@ -1,7 +1,7 @@
 -- Run this only after:
 -- 1. supabase/functions/admin-action, community-action, and report-review are deployed.
 -- 2. Their secrets are set: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
---    FIREBASE_API_KEY, and ADMIN_PHONE for admin-action.
+--    FIREBASE_API_KEY, and ADMIN_EMAIL for admin-action.
 -- 3. The app has EXPO_PUBLIC_ADMIN_FUNCTION_URL,
 --    EXPO_PUBLIC_COMMUNITY_FUNCTION_URL, and
 --    EXPO_PUBLIC_REPORT_REVIEW_FUNCTION_URL set.

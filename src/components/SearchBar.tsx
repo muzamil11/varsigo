@@ -13,15 +13,14 @@ interface SearchBarProps {
 export function SearchBar({ value, onChangeText, placeholder = 'Search…' }: SearchBarProps) {
   const colors = useThemeColors();
   return (
-    <View className="min-h-12 flex-row items-center rounded-full border border-line bg-card px-3.5 dark:border-line-dark dark:bg-card-dark">
+    <View className="h-12 flex-row items-center rounded-full border border-line bg-card px-3.5 dark:border-line-dark dark:bg-card-dark">
       <Ionicons name="search" size={16} color={colors.textMuted} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={colors.textMuted}
-        className="ml-2 min-h-12 flex-1 text-sm text-foreground dark:text-foreground-dark"
-        style={{ textAlignVertical: 'center', paddingVertical: 8, lineHeight: 20 }}
+        className="ml-2 h-12 flex-1 text-sm text-foreground dark:text-foreground-dark"
         returnKeyType="search"
       />
     </View>

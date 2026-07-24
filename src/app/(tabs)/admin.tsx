@@ -67,9 +67,19 @@ async function loadAdminResource<T>(name: string, request: Promise<T>): Promise<
   }
 }
 
-function StatCard({ label, value, accent = false }: { label: string; value?: number; accent?: boolean }) {
+function StatCard({
+  label,
+  value,
+  accent = false,
+  onPress,
+}: {
+  label: string;
+  value?: number;
+  accent?: boolean;
+  onPress?: () => void;
+}) {
   return (
-    <Card className="min-w-[30%] flex-1 items-start">
+    <Card className="min-w-[30%] flex-1 items-start" onPress={onPress}>
       <Text
         className={`text-2xl font-bold ${accent ? 'text-accent' : 'text-foreground dark:text-foreground-dark'}`}
       >
@@ -87,6 +97,15 @@ export default function AdminScreen() {
   const isAdmin = useAuthStore((s) => s.isAdmin());
 
   const [segment, setSegment] = useState<Segment>('reviews');
+  const [teacherStep, setTeacherStep] = useState<'departments' | 'courses' | 'teachers'>('departments');
+
+  /** Stat cards up top jump straight to the relevant tab (and, for
+   *  Teachers-related stats, the relevant step inside it) — so every number
+   *  on screen is a shortcut, not just a static count. */
+  const goTo = (target: Segment, step?: 'departments' | 'courses' | 'teachers') => {
+    setSegment(target);
+    if (step) setTeacherStep(step);
+  };
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [uploads, setUploads] = useState<AdminUpload[]>([]);
@@ -103,10 +122,12 @@ export default function AdminScreen() {
   const segmentOpacity = useRef(new Animated.Value(1)).current;
   const hasLoaded = useRef(false);
 
-  const load = useCallback(async (isRefresh = false) => {
+  const load = useCallback(async (mode: 'initial' | 'refresh' | 'silent' = 'initial') => {
     if (!user) return;
-    const shouldShowSkeleton = !isRefresh && !hasLoaded.current;
-    shouldShowSkeleton ? setLoading(true) : setRefreshing(true);
+    const shouldShowSkeleton = mode === 'initial' && !hasLoaded.current;
+    const shouldShowSpinner = mode === 'refresh';
+    if (shouldShowSkeleton) setLoading(true);
+    if (shouldShowSpinner) setRefreshing(true);
     setError(null);
     setWarning(null);
     try {
@@ -160,13 +181,14 @@ export default function AdminScreen() {
       console.error('[admin] load failed', err);
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
-      shouldShowSkeleton ? setLoading(false) : setRefreshing(false);
+      if (shouldShowSkeleton) setLoading(false);
+      if (shouldShowSpinner) setRefreshing(false);
     }
   }, [user]);
 
   useFocusEffect(
     useCallback(() => {
-      if (isAdmin) load(hasLoaded.current);
+      if (isAdmin) load(hasLoaded.current ? 'refresh' : 'initial');
     }, [isAdmin, load]),
   );
 
@@ -256,7 +278,7 @@ export default function AdminScreen() {
     if (!user) return;
     try {
       await addTeacher({ adminEmail: user.email, name, departmentId, courseIds });
-      await load(true);
+      await load('silent');
     } catch (err) {
       Alert.alert('Could not add teacher', err instanceof Error ? err.message : 'Please try again.');
       throw err;
@@ -267,7 +289,7 @@ export default function AdminScreen() {
     if (!user) return;
     try {
       await addCourse({ adminEmail: user.email, name, code, departmentId });
-      await load(true);
+      await load('silent');
     } catch (err) {
       Alert.alert('Could not add course', err instanceof Error ? err.message : 'Please try again.');
       throw err;
@@ -278,7 +300,7 @@ export default function AdminScreen() {
     if (!user) return;
     try {
       await assignTeacherCourse(user.email, teacherId, courseId);
-      await load(true);
+      await load('silent');
     } catch (err) {
       Alert.alert('Could not assign course', err instanceof Error ? err.message : 'Please try again.');
       throw err;
@@ -289,7 +311,7 @@ export default function AdminScreen() {
     if (!user) return;
     try {
       await addDepartment(user.email, name);
-      await load(true);
+      await load('silent');
     } catch (err) {
       Alert.alert('Could not add department', err instanceof Error ? err.message : 'Please try again.');
       throw err;
@@ -312,7 +334,7 @@ export default function AdminScreen() {
             try {
               await deleteDepartment(user!.email, department.id);
               setStats((s) => (s ? { ...s, totalDepartments: s.totalDepartments - 1 } : s));
-              await load(true);
+              await load('silent');
             } catch (err) {
               Alert.alert(
                 'Could not delete department',
@@ -341,7 +363,7 @@ export default function AdminScreen() {
             try {
               await deleteCourse(user!.email, course.id);
               setStats((s) => (s ? { ...s, totalCourses: s.totalCourses - 1 } : s));
-              await load(true);
+              await load('silent');
             } catch (err) {
               Alert.alert(
                 'Could not delete course',
@@ -395,7 +417,7 @@ export default function AdminScreen() {
             }
           : s,
       );
-      load(true);
+      load('silent');
     } catch (err) {
       Alert.alert('Could not approve', err instanceof Error ? err.message : 'Please try again.');
       setTeacherSuggestions((prev) => [suggestion, ...prev]);
@@ -456,15 +478,55 @@ export default function AdminScreen() {
 
       <View className="mt-4 px-4">
         <View className="flex-row flex-wrap gap-2">
-          <StatCard label="Departments" value={stats?.totalDepartments} />
-          <StatCard label="Teachers" value={stats?.totalTeachers} />
-          <StatCard label="Courses" value={stats?.totalCourses} />
-          <StatCard label="Reviews approved" value={stats?.approvedReviews} />
-          <StatCard label="Uploads approved" value={stats?.approvedUploads} />
-          <StatCard label="Pending reviews" value={stats?.pendingReviews} accent />
-          <StatCard label="Pending uploads" value={stats?.pendingUploads} accent />
-          <StatCard label="Pending suggestions" value={stats?.pendingTeacherSuggestions} accent />
-          <StatCard label="Community reports" value={stats?.pendingCommunityReports} accent />
+          <StatCard
+            label="Departments"
+            value={stats?.totalDepartments}
+            onPress={() => goTo('teachers', 'departments')}
+          />
+          <StatCard
+            label="Teachers"
+            value={stats?.totalTeachers}
+            onPress={() => goTo('teachers', 'teachers')}
+          />
+          <StatCard
+            label="Courses"
+            value={stats?.totalCourses}
+            onPress={() => goTo('teachers', 'courses')}
+          />
+          <StatCard
+            label="Reviews approved"
+            value={stats?.approvedReviews}
+            onPress={() => goTo('reviews')}
+          />
+          <StatCard
+            label="Uploads approved"
+            value={stats?.approvedUploads}
+            onPress={() => goTo('uploads')}
+          />
+          <StatCard
+            label="Pending reviews"
+            value={stats?.pendingReviews}
+            accent
+            onPress={() => goTo('reviews')}
+          />
+          <StatCard
+            label="Pending uploads"
+            value={stats?.pendingUploads}
+            accent
+            onPress={() => goTo('uploads')}
+          />
+          <StatCard
+            label="Pending suggestions"
+            value={stats?.pendingTeacherSuggestions}
+            accent
+            onPress={() => goTo('teachers', 'teachers')}
+          />
+          <StatCard
+            label="Community reports"
+            value={stats?.pendingCommunityReports}
+            accent
+            onPress={() => goTo('community')}
+          />
         </View>
       </View>
 
@@ -520,7 +582,7 @@ export default function AdminScreen() {
               contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
               keyboardDismissMode="on-drag"
               refreshing={refreshing}
-              onRefresh={() => load(true)}
+              onRefresh={() => load('refresh')}
               ItemSeparatorComponent={() => (
                 <View className="mb-3 h-px bg-line dark:bg-line-dark" />
               )}
@@ -544,7 +606,7 @@ export default function AdminScreen() {
               contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
               keyboardDismissMode="on-drag"
               refreshing={refreshing}
-              onRefresh={() => load(true)}
+              onRefresh={() => load('refresh')}
               ItemSeparatorComponent={() => (
                 <View className="mb-3 h-px bg-line dark:bg-line-dark" />
               )}
@@ -563,13 +625,15 @@ export default function AdminScreen() {
             />
           ) : segment === 'teachers' ? (
             <AdminTeachersPanel
+              step={teacherStep}
+              onStepChange={setTeacherStep}
               departments={departments}
               adminDepartments={adminDepartments}
               courses={adminCourses}
               teachers={adminTeachers}
               suggestions={teacherSuggestions}
               refreshing={refreshing}
-              onRefresh={() => load(true)}
+              onRefresh={() => load('refresh')}
               onAddDepartment={handleAddDepartment}
               onDeleteDepartment={handleDeleteDepartment}
               onAddCourse={handleAddCourse}
@@ -587,7 +651,7 @@ export default function AdminScreen() {
               contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
               keyboardDismissMode="on-drag"
               refreshing={refreshing}
-              onRefresh={() => load(true)}
+              onRefresh={() => load('refresh')}
               renderItem={({ item, index }) => (
                 <AnimatedListItem index={index}>
                   <AdminCommunityCard

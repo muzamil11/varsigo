@@ -77,8 +77,11 @@ export default function HomeScreen() {
           try {
             await signOut(firebaseAuth);
           } catch {
-            // Firebase session isn't persisted anyway (see src/lib/firebase.ts) —
-            // the app's own authStore below is the real "logged in" source of truth.
+            // Best-effort: even if this fails, signing out of Google below and
+            // clearing authStore is enough to log the user out — the app's own
+            // authStore is the actual "logged in" source of truth (see
+            // src/lib/firebase.ts), and a stale Firebase session gets silently
+            // replaced by signInWithCredential on the next login anyway.
           }
           await signOutGoogle();
           useAuthStore.getState().logout();

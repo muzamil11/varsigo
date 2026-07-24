@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlatList, Text, TextInput, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { AnimatedListItem, Button, Card, Chip, StateMessage } from '@/components';
 import type { Department } from '@/features/departments/types';
@@ -9,7 +9,11 @@ import { AdminTeacherRow } from './AdminTeacherRow';
 import type { AdminCourse, AdminDepartment, AdminTeacher, TeacherSuggestion } from './data';
 import { TeacherSuggestionCard } from './TeacherSuggestionCard';
 
+type SetupStep = 'departments' | 'courses' | 'teachers';
+
 interface AdminTeachersPanelProps {
+  step: SetupStep;
+  onStepChange: (step: SetupStep) => void;
   departments: Department[];
   adminDepartments: AdminDepartment[];
   courses: AdminCourse[];
@@ -29,6 +33,8 @@ interface AdminTeachersPanelProps {
 }
 
 export function AdminTeachersPanel({
+  step,
+  onStepChange,
   departments,
   adminDepartments,
   courses,
@@ -134,276 +140,323 @@ export function AdminTeachersPanel({
     }
   };
 
+  const stepHeader = (
+    <>
+      <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">
+        Set up teachers in 3 steps
+      </Text>
+      <Text className="mb-3 text-sm text-muted dark:text-muted-dark">
+        1. Add departments → 2. Add courses → 3. Add teachers and assign their courses.
+      </Text>
+      <View className="mb-4 flex-row flex-wrap gap-2">
+        <Chip
+          label={`1. Departments (${adminDepartments.length})`}
+          selected={step === 'departments'}
+          onPress={() => onStepChange('departments')}
+        />
+        <Chip
+          label={`2. Courses (${courses.length})`}
+          selected={step === 'courses'}
+          onPress={() => onStepChange('courses')}
+        />
+        <Chip
+          label={`3. Teachers (${teachers.length})`}
+          selected={step === 'teachers'}
+          onPress={() => onStepChange('teachers')}
+        />
+      </View>
+    </>
+  );
+
+  const departmentsSection = (
+    <>
+      <Card className="mb-4">
+        <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
+          Add Department
+        </Text>
+        <TextInput
+          value={departmentName}
+          onChangeText={setDepartmentName}
+          placeholder="Department name"
+          placeholderTextColor={colors.textMuted}
+          className="mb-3 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+        />
+        <Button
+          label="Add Department"
+          onPress={handleDepartmentSubmit}
+          disabled={!isDepartmentValid}
+          loading={submittingDepartment}
+        />
+      </Card>
+
+      <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
+        Existing Departments
+      </Text>
+      {adminDepartments.length > 0 ? (
+        <View className="mb-4">
+          {adminDepartments.map((department) => (
+            <Card key={department.id} className="mb-3 flex-row items-center">
+              <Text className="flex-1 text-base font-semibold text-foreground dark:text-foreground-dark">
+                {department.name}
+              </Text>
+              <Button
+                label="Delete"
+                variant="ghost"
+                onPress={() => onDeleteDepartment(department)}
+                className="h-9 px-3"
+              />
+            </Card>
+          ))}
+        </View>
+      ) : (
+        <StateMessage icon="business-outline" title="No departments yet" />
+      )}
+    </>
+  );
+
+  const coursesSection = (
+    <>
+      <Card className="mb-4">
+        <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
+          Add Course
+        </Text>
+        <TextInput
+          value={courseName}
+          onChangeText={setCourseName}
+          placeholder="Course name"
+          placeholderTextColor={colors.textMuted}
+          className="mb-3 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+        />
+        <TextInput
+          value={courseCode}
+          onChangeText={setCourseCode}
+          placeholder="Course code (optional)"
+          autoCapitalize="characters"
+          placeholderTextColor={colors.textMuted}
+          className="mb-3 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+        />
+        <Text className="mb-2 text-xs font-semibold uppercase text-muted dark:text-muted-dark">
+          Department (tap one to select)
+        </Text>
+        <View className="mb-3 flex-row flex-wrap">
+          {departments.length > 0 ? (
+            departments.map((d) => (
+              <Chip
+                key={d.id}
+                label={d.name}
+                selected={courseDeptId === d.id}
+                onPress={() => setCourseDeptId(d.id)}
+              />
+            ))
+          ) : (
+            <Text className="text-sm text-muted dark:text-muted-dark">
+              Add a department first (step 1) before adding courses.
+            </Text>
+          )}
+        </View>
+        <Button
+          label="Add Course"
+          onPress={handleCourseSubmit}
+          disabled={!isCourseValid}
+          loading={submittingCourse}
+        />
+      </Card>
+
+      <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
+        Existing Courses
+      </Text>
+      {courses.length > 0 ? (
+        <View className="mb-4">
+          {courses.map((course) => (
+            <Card key={course.id} className="mb-3 flex-row items-center">
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-foreground dark:text-foreground-dark">
+                  {formatCourse(course)}
+                </Text>
+                {course.department && (
+                  <Text className="mt-0.5 text-xs text-muted dark:text-muted-dark">
+                    {course.department}
+                  </Text>
+                )}
+              </View>
+              <Button
+                label="Delete"
+                variant="ghost"
+                onPress={() => onDeleteCourse(course)}
+                className="h-9 px-3"
+              />
+            </Card>
+          ))}
+        </View>
+      ) : (
+        <StateMessage icon="book-outline" title="No courses yet" />
+      )}
+    </>
+  );
+
+  const teachersSection = (
+    <>
+      <Card className="mb-4">
+        <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
+          Add Teacher
+        </Text>
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder="Teacher name"
+          placeholderTextColor={colors.textMuted}
+          className="mb-3 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+        />
+        <Text className="mb-2 text-xs font-semibold uppercase text-muted dark:text-muted-dark">
+          Department (tap one to select)
+        </Text>
+        <View className="mb-3 flex-row flex-wrap">
+          {departments.length > 0 ? (
+            departments.map((d) => (
+              <Chip
+                key={d.id}
+                label={d.name}
+                selected={departmentId === d.id}
+                onPress={() => {
+                  setDepartmentId(d.id);
+                  setSelectedCourseIds((ids) =>
+                    ids.filter((courseId) =>
+                      courses.some(
+                        (course) =>
+                          course.id === courseId &&
+                          (!course.departmentId || course.departmentId === d.id),
+                      ),
+                    ),
+                  );
+                }}
+              />
+            ))
+          ) : (
+            <Text className="text-sm text-muted dark:text-muted-dark">
+              Add a department first (step 1) before adding teachers.
+            </Text>
+          )}
+        </View>
+        <Text className="mb-2 text-xs font-semibold uppercase text-muted dark:text-muted-dark">
+          Courses taught
+        </Text>
+        <View className="mb-3 flex-row flex-wrap">
+          {filteredCourses.length > 0 ? (
+            filteredCourses.map((course) => (
+              <Chip
+                key={course.id}
+                label={formatCourse(course)}
+                selected={selectedCourseIds.includes(course.id)}
+                onPress={() => toggleSelectedCourse(course.id)}
+              />
+            ))
+          ) : (
+            <Text className="text-sm text-muted dark:text-muted-dark">
+              Add courses first (step 2), or add the teacher now and assign courses later.
+            </Text>
+          )}
+        </View>
+        <Button
+          label="Add Teacher"
+          onPress={handleSubmit}
+          disabled={!isValid}
+          loading={submitting}
+        />
+      </Card>
+
+      <Card className="mb-4">
+        <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
+          Assign Course to Existing Teacher
+        </Text>
+        <Text className="mb-2 text-xs font-semibold uppercase text-muted dark:text-muted-dark">
+          Teacher
+        </Text>
+        <View className="mb-3 flex-row flex-wrap">
+          {teachers.length > 0 ? (
+            teachers.map((teacher) => (
+              <Chip
+                key={teacher.id}
+                label={teacher.name}
+                selected={assignTeacherId === teacher.id}
+                onPress={() => setAssignTeacherId(teacher.id)}
+              />
+            ))
+          ) : (
+            <Text className="text-sm text-muted dark:text-muted-dark">Add a teacher first.</Text>
+          )}
+        </View>
+        <Text className="mb-2 text-xs font-semibold uppercase text-muted dark:text-muted-dark">
+          Course
+        </Text>
+        <View className="mb-3 flex-row flex-wrap">
+          {courses.length > 0 ? (
+            courses.map((course) => (
+              <Chip
+                key={course.id}
+                label={formatCourse(course)}
+                selected={assignCourseId === course.id}
+                onPress={() => setAssignCourseId(course.id)}
+              />
+            ))
+          ) : (
+            <Text className="text-sm text-muted dark:text-muted-dark">Add a course first.</Text>
+          )}
+        </View>
+        <Button
+          label="Assign Course"
+          onPress={handleAssignSubmit}
+          disabled={!isAssignValid}
+          loading={assigningCourse}
+        />
+      </Card>
+
+      {suggestions.length > 0 && (
+        <>
+          <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
+            Suggested Teachers
+          </Text>
+          {suggestions.map((s, index) => (
+            <AnimatedListItem key={s.id} index={index}>
+              <TeacherSuggestionCard
+                suggestion={s}
+                onApprove={() => onApproveSuggestion(s)}
+                onReject={() => onRejectSuggestion(s)}
+              />
+            </AnimatedListItem>
+          ))}
+        </>
+      )}
+
+      <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
+        Existing Teachers
+      </Text>
+      {teachers.length > 0 ? (
+        teachers.map((teacher, index) => (
+          <AnimatedListItem key={teacher.id} index={index}>
+            <View className="mb-3">
+              <AdminTeacherRow teacher={teacher} onDelete={() => onDeleteTeacher(teacher)} />
+            </View>
+          </AnimatedListItem>
+        ))
+      ) : (
+        <StateMessage icon="people-outline" title="No teachers yet" />
+      )}
+    </>
+  );
+
   return (
-    <FlatList
-      data={teachers}
-      keyExtractor={(t) => t.id}
+    <ScrollView
       contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
-      refreshing={refreshing}
-      onRefresh={onRefresh}
-      ItemSeparatorComponent={() => <View className="mb-3 h-px bg-line dark:bg-line-dark" />}
-      ListHeaderComponent={
-        <>
-          <Card className="mb-4">
-            <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
-              Add Department
-            </Text>
-            <TextInput
-              value={departmentName}
-              onChangeText={setDepartmentName}
-              placeholder="Department name"
-              placeholderTextColor={colors.textMuted}
-              className="mb-3 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
-            />
-            <Button
-              label="Add Department"
-              onPress={handleDepartmentSubmit}
-              disabled={!isDepartmentValid}
-              loading={submittingDepartment}
-            />
-          </Card>
-
-          <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
-            Existing Departments
-          </Text>
-          {adminDepartments.length > 0 ? (
-            <View className="mb-4">
-              {adminDepartments.map((department) => (
-                <Card key={department.id} className="mb-3 flex-row items-center">
-                  <Text className="flex-1 text-base font-semibold text-foreground dark:text-foreground-dark">
-                    {department.name}
-                  </Text>
-                  <Button
-                    label="Delete"
-                    variant="ghost"
-                    onPress={() => onDeleteDepartment(department)}
-                    className="h-9 px-3"
-                  />
-                </Card>
-              ))}
-            </View>
-          ) : (
-            <StateMessage icon="business-outline" title="No departments yet" />
-          )}
-
-          <Card className="mb-4">
-            <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
-              Add Course
-            </Text>
-            <TextInput
-              value={courseName}
-              onChangeText={setCourseName}
-              placeholder="Course name"
-              placeholderTextColor={colors.textMuted}
-              className="mb-3 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
-            />
-            <TextInput
-              value={courseCode}
-              onChangeText={setCourseCode}
-              placeholder="Course code (optional)"
-              autoCapitalize="characters"
-              placeholderTextColor={colors.textMuted}
-              className="mb-3 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
-            />
-            <View className="mb-3 flex-row flex-wrap">
-              {departments.length > 0 ? (
-                departments.map((d) => (
-                  <Chip
-                    key={d.id}
-                    label={d.name}
-                    selected={courseDeptId === d.id}
-                    onPress={() => setCourseDeptId(d.id)}
-                  />
-                ))
-              ) : (
-                <Text className="text-sm text-muted dark:text-muted-dark">
-                  Add a department before adding courses.
-                </Text>
-              )}
-            </View>
-            <Button
-              label="Add Course"
-              onPress={handleCourseSubmit}
-              disabled={!isCourseValid}
-              loading={submittingCourse}
-            />
-          </Card>
-
-          <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
-            Existing Courses
-          </Text>
-          {courses.length > 0 ? (
-            <View className="mb-4">
-              {courses.map((course) => (
-                <Card key={course.id} className="mb-3 flex-row items-center">
-                  <View className="flex-1">
-                    <Text className="text-base font-semibold text-foreground dark:text-foreground-dark">
-                      {formatCourse(course)}
-                    </Text>
-                    {course.department && (
-                      <Text className="mt-0.5 text-xs text-muted dark:text-muted-dark">
-                        {course.department}
-                      </Text>
-                    )}
-                  </View>
-                  <Button
-                    label="Delete"
-                    variant="ghost"
-                    onPress={() => onDeleteCourse(course)}
-                    className="h-9 px-3"
-                  />
-                </Card>
-              ))}
-            </View>
-          ) : (
-            <StateMessage icon="book-outline" title="No courses yet" />
-          )}
-
-          <Card className="mb-4">
-            <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
-              Add Teacher
-            </Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Teacher name"
-              placeholderTextColor={colors.textMuted}
-              className="mb-3 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
-            />
-            <View className="mb-3 flex-row flex-wrap">
-              {departments.length > 0 ? (
-                departments.map((d) => (
-                  <Chip
-                    key={d.id}
-                    label={d.name}
-                    selected={departmentId === d.id}
-                    onPress={() => {
-                      setDepartmentId(d.id);
-                      setSelectedCourseIds((ids) =>
-                        ids.filter((courseId) =>
-                          courses.some(
-                            (course) =>
-                              course.id === courseId &&
-                              (!course.departmentId || course.departmentId === d.id),
-                          ),
-                        ),
-                      );
-                    }}
-                  />
-                ))
-              ) : (
-                <Text className="text-sm text-muted dark:text-muted-dark">
-                  Add a department before adding teachers.
-                </Text>
-              )}
-            </View>
-            <Text className="mb-2 text-xs font-semibold uppercase text-muted dark:text-muted-dark">
-              Courses taught
-            </Text>
-            <View className="mb-3 flex-row flex-wrap">
-              {filteredCourses.length > 0 ? (
-                filteredCourses.map((course) => (
-                  <Chip
-                    key={course.id}
-                    label={formatCourse(course)}
-                    selected={selectedCourseIds.includes(course.id)}
-                    onPress={() => toggleSelectedCourse(course.id)}
-                  />
-                ))
-              ) : (
-                <Text className="text-sm text-muted dark:text-muted-dark">
-                  Add courses first, or add the teacher now and assign courses later.
-                </Text>
-              )}
-            </View>
-            <Button
-              label="Add Teacher"
-              onPress={handleSubmit}
-              disabled={!isValid}
-              loading={submitting}
-            />
-          </Card>
-
-          <Card className="mb-4">
-            <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
-              Assign Course to Existing Teacher
-            </Text>
-            <Text className="mb-2 text-xs font-semibold uppercase text-muted dark:text-muted-dark">
-              Teacher
-            </Text>
-            <View className="mb-3 flex-row flex-wrap">
-              {teachers.length > 0 ? (
-                teachers.map((teacher) => (
-                  <Chip
-                    key={teacher.id}
-                    label={teacher.name}
-                    selected={assignTeacherId === teacher.id}
-                    onPress={() => setAssignTeacherId(teacher.id)}
-                  />
-                ))
-              ) : (
-                <Text className="text-sm text-muted dark:text-muted-dark">
-                  Add a teacher first.
-                </Text>
-              )}
-            </View>
-            <Text className="mb-2 text-xs font-semibold uppercase text-muted dark:text-muted-dark">
-              Course
-            </Text>
-            <View className="mb-3 flex-row flex-wrap">
-              {courses.length > 0 ? (
-                courses.map((course) => (
-                  <Chip
-                    key={course.id}
-                    label={formatCourse(course)}
-                    selected={assignCourseId === course.id}
-                    onPress={() => setAssignCourseId(course.id)}
-                  />
-                ))
-              ) : (
-                <Text className="text-sm text-muted dark:text-muted-dark">
-                  Add a course first.
-                </Text>
-              )}
-            </View>
-            <Button
-              label="Assign Course"
-              onPress={handleAssignSubmit}
-              disabled={!isAssignValid}
-              loading={assigningCourse}
-            />
-          </Card>
-
-          {suggestions.length > 0 && (
-            <>
-              <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
-                Suggested Teachers
-              </Text>
-              {suggestions.map((s, index) => (
-                <AnimatedListItem key={s.id} index={index}>
-                  <TeacherSuggestionCard
-                    suggestion={s}
-                    onApprove={() => onApproveSuggestion(s)}
-                    onReject={() => onRejectSuggestion(s)}
-                  />
-                </AnimatedListItem>
-              ))}
-            </>
-          )}
-
-          <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
-            Existing Teachers
-          </Text>
-        </>
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
       }
-      renderItem={({ item, index }) => (
-        <AnimatedListItem index={index}>
-          <AdminTeacherRow teacher={item} onDelete={() => onDeleteTeacher(item)} />
-        </AnimatedListItem>
-      )}
-      ListEmptyComponent={<StateMessage icon="people-outline" title="No teachers yet" />}
-    />
+    >
+      {stepHeader}
+      {step === 'departments' && departmentsSection}
+      {step === 'courses' && coursesSection}
+      {step === 'teachers' && teachersSection}
+    </ScrollView>
   );
 }
