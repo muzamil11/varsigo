@@ -49,3 +49,10 @@ body {
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
+
+/* Tailwind v4's Preflight (unlike v3) no longer sets cursor: pointer on
+   buttons, matching the raw browser default of cursor: default — every
+   clickable button/chip/card in this app needs it set explicitly. */
+button:not(:disabled) {
+  cursor: pointer;
+}

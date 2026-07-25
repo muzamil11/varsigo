@@ -76,7 +76,7 @@ export function ReviewsSection({ teacherId }: { teacherId: string }) {
           Ratings and student reviews for this teacher are only visible to signed-in students.
         </p>
         <Link
-          href="/login"
+          href={`/login?redirect=${encodeURIComponent(`/teachers/${teacherId}`)}`}
           className="mt-4 inline-block rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-white"
         >
           Sign in with Google

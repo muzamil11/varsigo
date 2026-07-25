@@ -419,6 +419,7 @@ export async function deleteDepartment(adminEmail: string, departmentId: string)
 interface RawAdminTeacherRow {
   id: string;
   name: string;
+  department_id: string | null;
   verification_status: AdminTeacher['verificationStatus'] | null;
   departments: { name: string } | null;
 }
@@ -487,7 +488,7 @@ export async function fetchAdminTeachers(adminEmail: string): Promise<AdminTeach
   try {
     const { data, error } = await supabase
       .from('teachers')
-      .select('id, name, verification_status, departments(name)')
+      .select('id, name, department_id, verification_status, departments(name)')
       .order('name');
     if (error) throw error;
 
@@ -497,6 +498,7 @@ export async function fetchAdminTeachers(adminEmail: string): Promise<AdminTeach
     return teachers.map((t) => ({
       id: t.id,
       name: t.name,
+      departmentId: t.department_id,
       department: t.departments?.name ?? null,
       courses: coursesByTeacher.get(t.id) ?? [],
       verificationStatus: t.verification_status ?? 'unverified',

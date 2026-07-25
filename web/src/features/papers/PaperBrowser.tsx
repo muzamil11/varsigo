@@ -36,17 +36,19 @@ export function PaperBrowser({ papers, departments, error }: PaperBrowserProps) 
   }, [papers, search, departmentId, kind, departments]);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6">
-      <h1 className="mb-1 text-2xl font-bold text-foreground dark:text-foreground-dark">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <h1 className="mb-1 text-3xl font-bold text-foreground dark:text-foreground-dark">
         Past Papers &amp; Notes
       </h1>
-      <p className="mb-4 text-sm text-muted dark:text-muted-dark">
+      <p className="mb-6 text-sm text-muted dark:text-muted-dark">
         Free to browse and download — shared by NED students.
       </p>
 
-      <SearchBar value={search} onChangeText={setSearch} placeholder="Search papers, subjects…" />
+      <div className="max-w-xl">
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Search papers, subjects…" />
+      </div>
 
-      <div className="mt-3 flex flex-wrap">
+      <div className="mt-4 flex flex-wrap">
         <Chip label="All types" selected={kind === 'All'} onPress={() => setKind('All')} />
         <Chip
           label="Past Papers"
@@ -67,7 +69,7 @@ export function PaperBrowser({ papers, departments, error }: PaperBrowserProps) 
         ))}
       </div>
 
-      <div className="mt-4">
+      <div className="mt-6">
         {error ? (
           <StateMessage icon={AlertTriangle} title="Couldn't load papers" subtitle={error} />
         ) : filtered.length === 0 ? (
@@ -77,39 +79,41 @@ export function PaperBrowser({ papers, departments, error }: PaperBrowserProps) 
             subtitle="Try a different search or filter."
           />
         ) : (
-          filtered.map((paper, index) => {
-            const fileType = getPaperFileType(paper.fileUrl);
-            return (
-              <AnimatedListItem key={paper.id} index={index}>
-                <a href={paper.fileUrl} target="_blank" rel="noopener noreferrer" className="mb-3 block">
-                  <Card>
-                    <div className="flex items-center">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/10">
-                        {fileType === 'pdf' ? (
-                          <FileText size={20} className="text-accent" />
-                        ) : (
-                          <ImageIcon size={20} className="text-accent" />
-                        )}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((paper, index) => {
+              const fileType = getPaperFileType(paper.fileUrl);
+              return (
+                <AnimatedListItem key={paper.id} index={index}>
+                  <a href={paper.fileUrl} target="_blank" rel="noopener noreferrer" className="block h-full">
+                    <Card className="h-full">
+                      <div className="flex items-center">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/10">
+                          {fileType === 'pdf' ? (
+                            <FileText size={20} className="text-accent" />
+                          ) : (
+                            <ImageIcon size={20} className="text-accent" />
+                          )}
+                        </div>
+                        <div className="ml-3 min-w-0 flex-1">
+                          <p className="truncate font-semibold text-foreground dark:text-foreground-dark">
+                            {paper.title}
+                          </p>
+                          <p className="truncate text-sm text-muted dark:text-muted-dark">
+                            {paper.subject} · {PAPER_KIND_LABELS[paper.kind]}
+                            {paper.year ? ` · ${paper.year}` : ''}
+                          </p>
+                        </div>
                       </div>
-                      <div className="ml-3 flex-1">
-                        <p className="font-semibold text-foreground dark:text-foreground-dark">
-                          {paper.title}
-                        </p>
-                        <p className="text-sm text-muted dark:text-muted-dark">
-                          {paper.subject} · {PAPER_KIND_LABELS[paper.kind]}
-                          {paper.year ? ` · ${paper.year}` : ''}
-                        </p>
-                        <p className="text-xs text-muted dark:text-muted-dark">
-                          {paper.department ?? 'General'} · Uploaded by {paper.uploaderName} ·{' '}
-                          {paper.createdAt}
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </a>
-              </AnimatedListItem>
-            );
-          })
+                      <p className="mt-3 truncate text-xs text-muted dark:text-muted-dark">
+                        {paper.department ?? 'General'} · Uploaded by {paper.uploaderName} ·{' '}
+                        {paper.createdAt}
+                      </p>
+                    </Card>
+                  </a>
+                </AnimatedListItem>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

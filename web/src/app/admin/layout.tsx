@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React from 'react';
 
-import { Screen, StateMessage } from '@/components';
+import { CardSkeletonList, Screen, StateMessage } from '@/components';
 import { useAuthStore } from '@/store/authStore';
 
 const SECTIONS = [
@@ -27,7 +27,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
   const isAdmin = useAuthStore((s) => s.isAdmin());
 
-  if (!hasHydrated) return null;
+  if (!hasHydrated) {
+    return (
+      <Screen>
+        <div className="mx-auto max-w-5xl px-4 py-6">
+          <CardSkeletonList padded={false} />
+        </div>
+      </Screen>
+    );
+  }
 
   if (!isAuthenticated || !isAdmin) {
     return (
@@ -39,7 +47,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
         {!isAuthenticated && (
           <div className="flex justify-center pb-12">
-            <Link href="/login" className="rounded-xl bg-accent px-6 py-3 text-base font-semibold text-white">
+            <Link
+              href={`/login?redirect=${encodeURIComponent(pathname)}`}
+              className="rounded-xl bg-accent px-6 py-3 text-base font-semibold text-white"
+            >
               Sign in
             </Link>
           </div>

@@ -1,18 +1,28 @@
 'use client';
 
 import { ShieldCheck } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import React from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import React, { Suspense } from 'react';
 
 import { Button, Screen } from '@/components';
 import { usePrivacyStore } from '@/store/privacyStore';
 
 export default function PrivacyNoticePage() {
+  return (
+    <Suspense fallback={null}>
+      <PrivacyNoticePageContent />
+    </Suspense>
+  );
+}
+
+function PrivacyNoticePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
 
   const handleAccept = () => {
     usePrivacyStore.getState().accept();
-    router.replace('/');
+    router.replace(redirectTo || '/');
   };
 
   return (

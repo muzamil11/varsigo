@@ -44,6 +44,7 @@ export interface AdminStats {
 export interface AdminTeacher {
   id: string;
   name: string;
+  departmentId: string | null;
   department: string | null;
   courses: { id: string; code: string | null; name: string }[];
   verificationStatus: 'admin_verified' | 'suggestion_approved' | 'unverified';

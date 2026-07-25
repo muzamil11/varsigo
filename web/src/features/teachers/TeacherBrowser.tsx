@@ -42,17 +42,19 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
   }, [teachers, search, departmentId, departments]);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6">
-      <h1 className="mb-1 text-2xl font-bold text-foreground dark:text-foreground-dark">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <h1 className="mb-1 text-3xl font-bold text-foreground dark:text-foreground-dark">
         Teachers
       </h1>
-      <p className="mb-4 text-sm text-muted dark:text-muted-dark">
+      <p className="mb-6 text-sm text-muted dark:text-muted-dark">
         Sign in to see ratings and reviews for any teacher.
       </p>
 
-      <SearchBar value={search} onChangeText={setSearch} placeholder="Search teachers, courses…" />
+      <div className="max-w-xl">
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Search teachers, courses…" />
+      </div>
 
-      <div className="mt-3 flex flex-wrap">
+      <div className="mt-4 flex flex-wrap">
         <Chip label="All" selected={!departmentId} onPress={() => setDepartmentId(null)} />
         {departments.map((d) => (
           <Chip
@@ -64,7 +66,7 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
         ))}
       </div>
 
-      <div className="mt-4">
+      <div className="mt-6">
         {error ? (
           <StateMessage icon={AlertTriangle} title="Couldn't load teachers" subtitle={error} />
         ) : filtered.length === 0 ? (
@@ -74,35 +76,39 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
             subtitle="Try a different search or filter."
           />
         ) : (
-          filtered.map((teacher, index) => (
-            <AnimatedListItem key={teacher.id} index={index}>
-              <Link href={`/teachers/${teacher.id}`} className="mb-3 block">
-                <Card>
-                  <div className="flex items-center">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/10">
-                      <Users size={20} className="text-accent" />
-                    </div>
-                    <div className="ml-3 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="font-semibold text-foreground dark:text-foreground-dark">
-                          {teacher.name}
-                        </p>
-                        {teacher.verificationStatus === 'admin_verified' && (
-                          <BadgeCheck size={14} className="text-accent" />
-                        )}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((teacher, index) => (
+              <AnimatedListItem key={teacher.id} index={index}>
+                <Link href={`/teachers/${teacher.id}`} className="block h-full">
+                  <Card className="h-full">
+                    <div className="flex items-center">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/10">
+                        <Users size={20} className="text-accent" />
                       </div>
-                      <p className="text-sm text-muted dark:text-muted-dark">
-                        {teacher.department ?? 'Department not set'}
-                        {teacher.courses.length > 0
-                          ? ` · ${teacher.courses.map((c) => c.code ?? c.name).join(', ')}`
-                          : ''}
-                      </p>
+                      <div className="ml-3 flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="truncate font-semibold text-foreground dark:text-foreground-dark">
+                            {teacher.name}
+                          </p>
+                          {teacher.verificationStatus === 'admin_verified' && (
+                            <BadgeCheck size={14} className="shrink-0 text-accent" />
+                          )}
+                        </div>
+                        <p className="truncate text-sm text-muted dark:text-muted-dark">
+                          {teacher.department ?? 'Department not set'}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              </Link>
-            </AnimatedListItem>
-          ))
+                    {teacher.courses.length > 0 && (
+                      <p className="mt-3 line-clamp-2 text-xs text-muted dark:text-muted-dark">
+                        {teacher.courses.map((c) => c.code ?? c.name).join(', ')}
+                      </p>
+                    )}
+                  </Card>
+                </Link>
+              </AnimatedListItem>
+            ))}
+          </div>
         )}
       </div>
     </div>

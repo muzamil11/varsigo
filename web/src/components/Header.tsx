@@ -88,7 +88,7 @@ export function Header() {
             </button>
           ) : (
             <Link
-              href="/login"
+              href={`/login?redirect=${encodeURIComponent(pathname)}`}
               className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-white"
             >
               Sign in

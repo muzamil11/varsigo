@@ -29,8 +29,19 @@ export default function AdminTeachersListPage() {
 
   const [name, setName] = useState('');
   const [departmentId, setDepartmentId] = useState('');
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
   const [assignCourseId, setAssignCourseId] = useState<Record<string, string>>({});
+
+  const coursesForNewTeacher = departmentId
+    ? courses.filter((c) => c.departmentId === departmentId)
+    : [];
+
+  const toggleSelectedCourse = (courseId: string) => {
+    setSelectedCourseIds((prev) =>
+      prev.includes(courseId) ? prev.filter((id) => id !== courseId) : [...prev, courseId],
+    );
+  };
 
   const load = () => {
     if (!user?.email) return;
@@ -58,8 +69,9 @@ export default function AdminTeachersListPage() {
     if (!user?.email || name.trim().length === 0 || !departmentId) return;
     setAdding(true);
     try {
-      await addTeacher({ adminEmail: user.email, name, departmentId });
+      await addTeacher({ adminEmail: user.email, name, departmentId, courseIds: selectedCourseIds });
       setName('');
+      setSelectedCourseIds([]);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add teacher.');
@@ -157,7 +169,7 @@ export default function AdminTeachersListPage() {
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -166,7 +178,10 @@ export default function AdminTeachersListPage() {
         />
         <select
           value={departmentId}
-          onChange={(e) => setDepartmentId(e.target.value)}
+          onChange={(e) => {
+            setDepartmentId(e.target.value);
+            setSelectedCourseIds([]);
+          }}
           className="h-11 rounded-lg border border-line bg-card px-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
         >
           <option value="">Department</option>
@@ -177,6 +192,41 @@ export default function AdminTeachersListPage() {
           ))}
         </select>
       </div>
+
+      {departmentId && (
+        <div className="mb-3">
+          <p className="mb-1.5 text-xs text-muted dark:text-muted-dark">
+            Courses this teacher teaches (optional — can also assign later)
+          </p>
+          {coursesForNewTeacher.length === 0 ? (
+            <p className="text-xs text-muted dark:text-muted-dark">
+              No courses in this department yet — add some in the Courses tab first.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {coursesForNewTeacher.map((c) => (
+                <label
+                  key={c.id}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${
+                    selectedCourseIds.includes(c.id)
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'border-line text-muted dark:border-line-dark dark:text-muted-dark'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="hidden"
+                    checked={selectedCourseIds.includes(c.id)}
+                    onChange={() => toggleSelectedCourse(c.id)}
+                  />
+                  {c.code ? `${c.code} — ${c.name}` : c.name}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <Button
         label="Add teacher"
         onPress={handleAdd}
@@ -215,17 +265,27 @@ export default function AdminTeachersListPage() {
                 onChange={(e) => setAssignCourseId((prev) => ({ ...prev, [t.id]: e.target.value }))}
                 className="h-9 flex-1 rounded-lg border border-line bg-background px-2 text-xs text-foreground outline-none dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
               >
-                <option value="">Assign course…</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.code ? `${c.code} — ${c.name}` : c.name}
-                  </option>
-                ))}
+                <option value="">
+                  {t.departmentId
+                    ? 'Assign course…'
+                    : 'Set a department first to assign courses'}
+                </option>
+                {/* Filtered to the teacher's own department — an earlier version listed every
+                    course from every department here, making it easy to accidentally assign a
+                    teacher a course outside their own department. */}
+                {courses
+                  .filter((c) => c.departmentId === t.departmentId)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.code ? `${c.code} — ${c.name}` : c.name}
+                    </option>
+                  ))}
               </select>
               <button
                 type="button"
                 onClick={() => handleAssign(t.id)}
-                className="rounded-lg border border-line px-3 text-xs font-medium text-foreground dark:border-line-dark dark:text-foreground-dark"
+                disabled={!t.departmentId}
+                className="rounded-lg border border-line px-3 text-xs font-medium text-foreground disabled:opacity-50 dark:border-line-dark dark:text-foreground-dark"
               >
                 Assign
               </button>

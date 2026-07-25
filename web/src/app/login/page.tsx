@@ -1,18 +1,28 @@
 'use client';
 
 import { GraduationCap } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import React, { Suspense, useState } from 'react';
 
 import { Button, Screen } from '@/components';
 import { upsertUserByGoogle } from '@/features/auth/api';
 import { signInWithGoogle } from '@/features/auth/google';
-import { getPostAuthRoute } from '@/lib/routing';
+import { getPostAuthRoute, withRedirect } from '@/lib/routing';
 import { useAuthStore } from '@/store/authStore';
 import { usePrivacyStore } from '@/store/privacyStore';
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,10 +40,16 @@ export default function LoginPage() {
         email: firebaseUser.email,
       });
       useAuthStore.getState().setUser(firebaseUser.uid, supabaseUser);
-      router.replace(getPostAuthRoute(supabaseUser, usePrivacyStore.getState().accepted));
+      const nextRoute = getPostAuthRoute(supabaseUser, usePrivacyStore.getState().accepted, redirectTo);
+      // Deliberately not resetting `loading` here — the button should stay
+      // in its spinner state through the navigation below rather than
+      // flashing back to normal for the moment before the next page (and,
+      // in dev, its on-demand Turbopack compile) actually appears. Without
+      // this, the page can look like it silently hung.
+      const isIntermediateStep = nextRoute === '/onboarding-name' || nextRoute === '/privacy-notice';
+      router.replace(isIntermediateStep ? withRedirect(nextRoute, redirectTo) : nextRoute);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Please try again.');
-    } finally {
       setLoading(false);
     }
   };

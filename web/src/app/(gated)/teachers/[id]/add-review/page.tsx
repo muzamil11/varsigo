@@ -78,10 +78,11 @@ export default function AddReviewPage() {
         comment,
         isAnonymous,
       });
+      // Keep the spinner through the navigation instead of resetting it
+      // first — see login/page.tsx's comment for why.
       router.push(`/teachers/${teacherId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not submit review.');
-    } finally {
       setSubmitting(false);
     }
   };

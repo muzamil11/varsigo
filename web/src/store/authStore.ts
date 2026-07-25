@@ -45,3 +45,21 @@ export const useAuthStore = create<AuthState>()(
 useAuthStore.persist?.onFinishHydration(() => {
   useAuthStore.setState({ hasHydrated: true });
 });
+
+// Safety net: some browser setups (privacy/tracking-protection extensions,
+// storage-partitioning, private-browsing storage restrictions) can prevent
+// the persist hydration callback above from ever firing, which would leave
+// every gated page stuck on its loading skeleton forever. Force-resolve
+// after a short delay so the app always treats a stuck hydration as "no
+// user" rather than hanging indefinitely.
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    if (!useAuthStore.getState().hasHydrated) {
+      console.warn(
+        '[authStore] Hydration from localStorage did not complete in time — proceeding as signed out. ' +
+          'This usually means a browser extension or privacy setting is blocking localStorage.',
+      );
+      useAuthStore.setState({ hasHydrated: true });
+    }
+  }, 1500);
+}

@@ -27,8 +27,17 @@ export const usePrivacyStore = create<PrivacyState>()(
   ),
 );
 
-// See authStore.ts's comment above — `.persist` is undefined during SSR
-// since there's no localStorage to back it, so this is guarded.
+// See authStore.ts's comments above — `.persist` is undefined during SSR,
+// and the timeout is a safety net in case a browser setup prevents the
+// hydration callback from ever firing.
 usePrivacyStore.persist?.onFinishHydration(() => {
   usePrivacyStore.setState({ hasHydrated: true });
 });
+
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    if (!usePrivacyStore.getState().hasHydrated) {
+      usePrivacyStore.setState({ hasHydrated: true });
+    }
+  }, 1500);
+}

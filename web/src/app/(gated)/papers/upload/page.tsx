@@ -55,10 +55,11 @@ export default function UploadPaperPage() {
         kind,
         files,
       });
+      // Keep the spinner through the navigation instead of resetting it
+      // first — see login/page.tsx's comment for why.
       router.push('/papers');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not upload.');
-    } finally {
       setSubmitting(false);
     }
   };

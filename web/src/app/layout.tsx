@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import React from 'react';
 
 import { ErrorBoundary } from '@/components';
+import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import './globals.css';
 
@@ -22,10 +23,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body className="min-h-screen bg-background antialiased dark:bg-background-dark">
+      <body
+        className="flex min-h-screen flex-col bg-background antialiased dark:bg-background-dark"
+        suppressHydrationWarning
+      >
         <ErrorBoundary>
           <Header />
-          <main>{children}</main>
+          <main className="flex-1">{children}</main>
+          <Footer />
         </ErrorBoundary>
       </body>
     </html>

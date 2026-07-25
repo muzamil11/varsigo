@@ -1,17 +1,27 @@
 'use client';
 
 import { User } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import React, { Suspense, useState } from 'react';
 
 import { Button, Screen } from '@/components';
 import { updateUserName } from '@/features/auth/api';
-import { getPostAuthRoute } from '@/lib/routing';
+import { getPostAuthRoute, withRedirect } from '@/lib/routing';
 import { useAuthStore } from '@/store/authStore';
 import { usePrivacyStore } from '@/store/privacyStore';
 
 export default function OnboardingNamePage() {
+  return (
+    <Suspense fallback={null}>
+      <OnboardingNamePageContent />
+    </Suspense>
+  );
+}
+
+function OnboardingNamePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
   const user = useAuthStore((s) => s.user);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,10 +36,12 @@ export default function OnboardingNamePage() {
     try {
       const updated = await updateUserName(user.id, trimmed);
       useAuthStore.getState().updateUser(updated);
-      router.replace(getPostAuthRoute(updated, usePrivacyStore.getState().accepted));
+      const nextRoute = getPostAuthRoute(updated, usePrivacyStore.getState().accepted, redirectTo);
+      // See login/page.tsx's comment — keep the spinner through the
+      // navigation instead of resetting it first.
+      router.replace(nextRoute === '/privacy-notice' ? withRedirect(nextRoute, redirectTo) : nextRoute);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Try again.');
-    } finally {
       setLoading(false);
     }
   };
