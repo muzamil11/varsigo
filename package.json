@@ -7,6 +7,12 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "doctor": "npx expo-doctor",
+    "check:deps": "expo install --check",
+    "web:lint": "npm --prefix web run lint",
+    "web:build": "npm --prefix web run build",
+    "release:check": "npm run typecheck && npm run doctor && npm run check:deps && npm run web:lint && npm run web:build",
     "seed": "tsx src/lib/seed.ts"
   },
   "dependencies": {

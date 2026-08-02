@@ -37,7 +37,7 @@ const STEPS = [
   {
     step: '1',
     title: 'Sign in with Google',
-    description: 'One tap with your Google account — no separate password to remember.',
+    description: 'One tap with your Google account - no separate password to remember.',
   },
   {
     step: '2',
@@ -46,7 +46,7 @@ const STEPS = [
   },
   {
     step: '3',
-    title: 'Moderated before it’s public',
+    title: "Moderated before it's public",
     description: 'Every review and upload is checked before it goes live, keeping things useful.',
   },
 ];

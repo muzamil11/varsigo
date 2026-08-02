@@ -51,6 +51,18 @@ interface VerifiedIdentity {
   email: string;
 }
 
+const PAPERS_BUCKET = 'papers';
+const MAX_PDF_BYTES = 20 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_UPLOAD_TOTAL_BYTES = 30 * 1024 * 1024;
+const MAX_IMAGE_PAGES = 10;
+
+interface UploadFileRequest {
+  name: string;
+  contentType?: string;
+  size?: number;
+}
+
 async function getVerifiedIdentity(authHeader: string | null): Promise<VerifiedIdentity> {
   const token = authHeader?.replace(/^Bearer\s+/i, '');
   if (!token) throw new Error('Missing Firebase token.');
@@ -107,6 +119,47 @@ async function updateCount(
 ) {
   const { error } = await supabase.from(table).update({ [column]: count, ...extra }).eq('id', id);
   if (error) throw error;
+}
+
+function safeFileName(name: string): string {
+  const safe = sanitizeText(name).replace(/[^\w.\-]+/g, '_');
+  return safe || 'upload';
+}
+
+function contentTypeFor(fileName: string, contentType?: string): string {
+  const normalized = String(contentType ?? '').toLowerCase();
+  if (normalized === 'application/pdf' || normalized === 'image/jpeg' || normalized === 'image/png') {
+    return normalized;
+  }
+
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  if (ext === 'pdf') return 'application/pdf';
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'png') return 'image/png';
+  return 'application/octet-stream';
+}
+
+function validateUploadFiles(files: UploadFileRequest[]): void {
+  if (files.length === 0) throw new Error('Choose a PDF or at least one image.');
+  if (files.length > MAX_IMAGE_PAGES) throw new Error(`Upload up to ${MAX_IMAGE_PAGES} image pages at once.`);
+
+  const types = files.map((file) => contentTypeFor(file.name, file.contentType));
+  const hasPdf = types.some((type) => type === 'application/pdf');
+  const hasImage = types.some((type) => type === 'image/jpeg' || type === 'image/png');
+  if (hasPdf && files.length > 1) throw new Error('Upload either one PDF or up to 10 image pages.');
+  if (hasPdf && hasImage) throw new Error('Upload either one PDF or image pages, not both.');
+  if (types.some((type) => type === 'application/octet-stream')) {
+    throw new Error('Only PDF, JPG, and PNG files are allowed.');
+  }
+
+  const total = files.reduce((sum, file) => sum + Number(file.size ?? 0), 0);
+  if (total > MAX_UPLOAD_TOTAL_BYTES) throw new Error('Selected files are too large.');
+
+  for (const [index, file] of files.entries()) {
+    const size = Number(file.size ?? 0);
+    const limit = types[index] === 'application/pdf' ? MAX_PDF_BYTES : MAX_IMAGE_BYTES;
+    if (size > limit) throw new Error(`"${file.name}" is too large.`);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -192,6 +245,46 @@ Deno.serve(async (req) => {
       return Response.json({ data: null }, { headers: corsHeaders });
     }
 
+    if (action === 'createPaperUploadUrls') {
+      const files: UploadFileRequest[] = Array.isArray(payload.files)
+        ? payload.files.map((file: Record<string, unknown>) => ({
+            name: String(file.name ?? ''),
+            contentType: file.contentType ? String(file.contentType) : undefined,
+            size: file.size === null || file.size === undefined ? undefined : Number(file.size),
+          }))
+        : [];
+      validateUploadFiles(files);
+
+      const batchId = `${Date.now()}-${crypto.randomUUID()}`;
+      const uploads = [];
+      for (const [index, file] of files.entries()) {
+        const safeName = safeFileName(file.name);
+        const path = `${userId}/${batchId}-${index + 1}-${safeName}`;
+        const { data, error } = await supabase.storage
+          .from(PAPERS_BUCKET)
+          .createSignedUploadUrl(path);
+        if (error) throw error;
+        uploads.push({
+          path,
+          token: data.token,
+          publicUrl: `${requiredEnv('SUPABASE_URL')}/storage/v1/object/public/${PAPERS_BUCKET}/${path}`,
+        });
+      }
+
+      return Response.json({ data: { uploads } }, { headers: corsHeaders });
+    }
+
+    if (action === 'deletePaperUploadFiles') {
+      const paths: string[] = Array.isArray(payload.paths) ? payload.paths.map(String) : [];
+      const scopedPaths = paths.filter((path) => path.startsWith(`${userId}/`));
+      if (scopedPaths.length > 0) {
+        const { error } = await supabase.storage.from(PAPERS_BUCKET).remove(scopedPaths);
+        if (error) throw error;
+      }
+
+      return Response.json({ data: null }, { headers: corsHeaders });
+    }
+
     if (action === 'submitPaperUpload') {
       const title = sanitizeText(payload.title);
       const subject = sanitizeText(payload.subject);
@@ -211,6 +304,9 @@ Deno.serve(async (req) => {
         throw new Error('Invalid uploaded file URL.');
       }
       if (fileUrls.some((url) => !url.startsWith(publicBucketPrefix))) {
+        throw new Error('Invalid uploaded file URL.');
+      }
+      if (fileUrls.some((url) => !url.startsWith(`${publicBucketPrefix}${userId}/`))) {
         throw new Error('Invalid uploaded file URL.');
       }
 

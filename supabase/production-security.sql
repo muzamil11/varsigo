@@ -1,5 +1,6 @@
 -- Run this only after:
--- 1. supabase/functions/admin-action, community-action, and report-review are deployed.
+-- 1. supabase/functions/admin-action, community-action, report-review, and
+--    delete-account are deployed.
 -- 2. Their secrets are set: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
 --    FIREBASE_API_KEY, and ADMIN_EMAIL for admin-action.
 -- 3. The app has EXPO_PUBLIC_ADMIN_FUNCTION_URL,
@@ -9,6 +10,10 @@
 -- This removes public anon access to writes that now go through Edge
 -- Functions. The functions keep working because they use the service-role key
 -- server-side after verifying the Firebase ID token.
+--
+-- Paper uploads now request signed upload URLs from community-action. This
+-- lets production remove public direct inserts into storage.objects while
+-- keeping public reads for approved files in the public "papers" bucket.
 
 drop policy if exists "public update reviews" on reviews;
 drop policy if exists "public delete reviews" on reviews;
@@ -38,3 +43,4 @@ drop policy if exists "public update own user row" on users;
 
 drop policy if exists "public delete questions" on questions;
 drop policy if exists "public delete answers" on answers;
+drop policy if exists "public upload papers bucket" on storage.objects;

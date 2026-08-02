@@ -158,7 +158,12 @@ export default function UploadPaperScreen() {
         departmentId,
         year: year.trim() ? Number(year.trim()) : null,
         kind,
-        files: files.map((selected) => ({ uri: selected.uri, name: selected.name })),
+        files: files.map((selected) => ({
+          uri: selected.uri,
+          name: selected.name,
+          contentType: selected.mimeType,
+          size: selected.size,
+        })),
       });
       Alert.alert(
         'Upload received',

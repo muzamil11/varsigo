@@ -19,6 +19,12 @@ interface RawUploadRow {
   users: { name: string | null } | null;
 }
 
+interface SignedUploadSlot {
+  path: string;
+  token: string;
+  publicUrl: string;
+}
+
 export interface PaperFilters {
   departmentId?: string;
   year?: number;
@@ -77,6 +83,10 @@ function contentTypeFor(fileName: string): string {
   return CONTENT_TYPES[ext] ?? 'application/octet-stream';
 }
 
+function uploadContentTypeFor(file: { name: string; contentType?: string }): string {
+  return file.contentType || contentTypeFor(file.name);
+}
+
 /** Decodes a base64 string into raw bytes for the storage upload below.
  *  `fetch(uri).blob()` does not reliably carry binary data through to
  *  Supabase's storage upload on React Native (observed as 0-byte objects,
@@ -96,7 +106,7 @@ export interface UploadPaperInput {
   departmentId: string | null;
   year: number | null;
   kind: PaperKind;
-  files: { uri: string; name: string }[];
+  files: { uri: string; name: string; contentType?: string; size?: number }[];
 }
 
 export const MAX_PDF_BYTES = 20 * 1024 * 1024;
@@ -106,10 +116,33 @@ export const MAX_IMAGE_PAGES = 10;
 
 async function removeUploadedFiles(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
+  if (isCommunityFunctionConfigured()) {
+    try {
+      await callCommunityFunction<void>('deletePaperUploadFiles', { paths });
+      return;
+    } catch (error) {
+      console.warn(
+        '[papers] signed upload cleanup failed after upload error',
+        error instanceof Error ? error.message : String(error),
+      );
+      return;
+    }
+  }
+
   const { error } = await supabase.storage.from(PAPERS_BUCKET).remove(paths);
   if (error) {
     console.warn('[papers] cleanup failed after upload error', error.message);
   }
+}
+
+async function createSignedUploadSlots(
+  files: { name: string; contentType: string; size?: number }[],
+): Promise<SignedUploadSlot[]> {
+  const result = await callCommunityFunction<{ uploads: SignedUploadSlot[] }>(
+    'createPaperUploadUrls',
+    { files },
+  );
+  return result.uploads;
 }
 
 /** Uploads the file (PDF as-is, images pre-compressed by the caller) to the
@@ -123,24 +156,46 @@ export async function uploadPaper(input: UploadPaperInput): Promise<void> {
     }
 
     const uploadedUrls: string[] = [];
-    const batchId = Date.now();
+    const signedUploads = isCommunityFunctionConfigured()
+      ? await createSignedUploadSlots(
+          input.files.map((file) => ({
+            name: file.name,
+            contentType: uploadContentTypeFor(file),
+            size: file.size,
+          })),
+        )
+      : null;
+    if (signedUploads && signedUploads.length !== input.files.length) {
+      throw new Error('Could not prepare upload. Please try again.');
+    }
 
     for (const [index, file] of input.files.entries()) {
       const safeName = file.name.replace(/[^\w.\-]+/g, '_');
-      const path = `${input.userId}/${batchId}-${index + 1}-${safeName}`;
+      const uploadSlot = signedUploads?.[index] ?? null;
+      const path = uploadSlot?.path ?? `${input.userId}/${Date.now()}-${index + 1}-${safeName}`;
       const base64 = await FileSystem.readAsStringAsync(file.uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
       const bytes = decode(base64);
 
-      const { error: uploadError } = await supabase.storage
-        .from(PAPERS_BUCKET)
-        .upload(path, bytes, { contentType: contentTypeFor(safeName) });
+      const { error: uploadError } = uploadSlot
+        ? await supabase.storage
+            .from(PAPERS_BUCKET)
+            .uploadToSignedUrl(path, uploadSlot.token, bytes, {
+              contentType: uploadContentTypeFor(file),
+            })
+        : await supabase.storage
+            .from(PAPERS_BUCKET)
+            .upload(path, bytes, { contentType: uploadContentTypeFor(file) });
       if (uploadError) throw uploadError;
       uploadedPaths.push(path);
 
-      const { data: publicUrlData } = supabase.storage.from(PAPERS_BUCKET).getPublicUrl(path);
-      uploadedUrls.push(publicUrlData.publicUrl);
+      if (uploadSlot) {
+        uploadedUrls.push(uploadSlot.publicUrl);
+      } else {
+        const { data: publicUrlData } = supabase.storage.from(PAPERS_BUCKET).getPublicUrl(path);
+        uploadedUrls.push(publicUrlData.publicUrl);
+      }
     }
 
     if (isCommunityFunctionConfigured()) {

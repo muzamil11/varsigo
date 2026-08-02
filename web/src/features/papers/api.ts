@@ -16,6 +16,12 @@ interface RawUploadRow {
   users: { name: string | null } | null;
 }
 
+interface SignedUploadSlot {
+  path: string;
+  token: string;
+  publicUrl: string;
+}
+
 export interface PaperFilters {
   departmentId?: string;
   year?: number;
@@ -79,6 +85,19 @@ export const MAX_IMAGE_PAGES = 10;
 
 async function removeUploadedFiles(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
+  if (isCommunityFunctionConfigured()) {
+    try {
+      await callCommunityFunction<void>('deletePaperUploadFiles', { paths });
+      return;
+    } catch (error) {
+      console.warn(
+        '[papers] signed upload cleanup failed after upload error',
+        error instanceof Error ? error.message : String(error),
+      );
+      return;
+    }
+  }
+
   const { error } = await supabase.storage.from(PAPERS_BUCKET).remove(paths);
   if (error) {
     console.warn('[papers] cleanup failed after upload error', error.message);
@@ -87,6 +106,20 @@ async function removeUploadedFiles(paths: string[]): Promise<void> {
 
 function safeFileName(name: string): string {
   return name.replace(/[^\w.-]+/g, '_');
+}
+
+async function createSignedUploadSlots(files: File[]): Promise<SignedUploadSlot[]> {
+  const result = await callCommunityFunction<{ uploads: SignedUploadSlot[] }>(
+    'createPaperUploadUrls',
+    {
+      files: files.map((file) => ({
+        name: file.name,
+        contentType: file.type || 'application/octet-stream',
+        size: file.size,
+      })),
+    },
+  );
+  return result.uploads;
 }
 
 /** Validates each file's size against the mobile app's same caps before
@@ -122,18 +155,34 @@ export async function uploadPaper(input: UploadPaperInput): Promise<void> {
     if (validationError) throw new Error(validationError);
 
     const uploadedUrls: string[] = [];
-    const batchId = Date.now();
+    const signedUploads = isCommunityFunctionConfigured()
+      ? await createSignedUploadSlots(input.files)
+      : null;
+    if (signedUploads && signedUploads.length !== input.files.length) {
+      throw new Error('Could not prepare upload. Please try again.');
+    }
 
     for (const [index, file] of input.files.entries()) {
-      const path = `${input.userId}/${batchId}-${index + 1}-${safeFileName(file.name)}`;
-      const { error: uploadError } = await supabase.storage
-        .from(PAPERS_BUCKET)
-        .upload(path, file, { contentType: file.type || 'application/octet-stream' });
+      const uploadSlot = signedUploads?.[index] ?? null;
+      const path = uploadSlot?.path ?? `${input.userId}/${Date.now()}-${index + 1}-${safeFileName(file.name)}`;
+      const { error: uploadError } = uploadSlot
+        ? await supabase.storage
+            .from(PAPERS_BUCKET)
+            .uploadToSignedUrl(path, uploadSlot.token, file, {
+              contentType: file.type || 'application/octet-stream',
+            })
+        : await supabase.storage
+            .from(PAPERS_BUCKET)
+            .upload(path, file, { contentType: file.type || 'application/octet-stream' });
       if (uploadError) throw uploadError;
       uploadedPaths.push(path);
 
-      const { data: publicUrlData } = supabase.storage.from(PAPERS_BUCKET).getPublicUrl(path);
-      uploadedUrls.push(publicUrlData.publicUrl);
+      if (uploadSlot) {
+        uploadedUrls.push(uploadSlot.publicUrl);
+      } else {
+        const { data: publicUrlData } = supabase.storage.from(PAPERS_BUCKET).getPublicUrl(path);
+        uploadedUrls.push(publicUrlData.publicUrl);
+      }
     }
 
     if (isCommunityFunctionConfigured()) {

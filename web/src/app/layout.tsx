@@ -8,8 +8,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Varsigo — NED University Teacher Reviews, Past Papers & FAQ',
-    template: '%s · Varsigo',
+    default: 'Varsigo - NED University Teacher Reviews, Past Papers & FAQ',
+    template: '%s | Varsigo',
   },
   description:
     'Varsigo helps NED University students find honest teacher reviews, past papers, notes, and answers to common university questions.',
