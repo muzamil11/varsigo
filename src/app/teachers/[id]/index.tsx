@@ -211,6 +211,13 @@ export default function TeacherDetailScreen() {
                       {((review.teaching + review.grading + review.attendance) / 3).toFixed(1)}
                     </Text>
                   </View>
+                  {review.course && (
+                    <View className="mt-2 self-start rounded-md bg-accent/10 px-2 py-1">
+                      <Text className="text-xs font-medium text-accent">
+                        {formatCourse(review.course)}
+                      </Text>
+                    </View>
+                  )}
                   {review.comment && (
                     <Text className="mt-2 text-sm leading-5 text-muted dark:text-muted-dark">
                       {review.comment}

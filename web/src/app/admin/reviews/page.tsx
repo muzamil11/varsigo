@@ -71,6 +71,9 @@ export default function AdminReviewsPage() {
               <p className="font-semibold text-foreground dark:text-foreground-dark">
                 {review.teacherName}
               </p>
+              {review.courseName && (
+                <p className="text-xs font-medium text-accent">{review.courseName}</p>
+              )}
               <p className="text-xs text-muted dark:text-muted-dark">
                 {review.submittedBy} · {review.createdAt}
                 {review.reported && <span className="ml-2 text-red-500">Reported</span>}

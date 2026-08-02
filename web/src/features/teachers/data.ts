@@ -15,6 +15,7 @@ export interface TeacherListItem {
 export interface TeacherReview {
   id: string;
   author: string; // "Anonymous" or the reviewer's name
+  course: { id: string; code: string | null; name: string } | null;
   comment: string | null;
   teaching: number;
   grading: number;

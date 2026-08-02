@@ -5,6 +5,7 @@ import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 
 import { Button, CardSkeletonList, StateMessage } from '@/components';
+import { formatCourse } from '@/features/courses/types';
 import { useAuthStore } from '@/store/authStore';
 import type { TeacherDetail } from './data';
 import { fetchTeacherById, reportReview } from './api';
@@ -150,6 +151,11 @@ export function ReviewsSection({ teacherId }: { teacherId: string }) {
             {review.comment && (
               <p className="mt-2 text-sm text-foreground dark:text-foreground-dark">
                 {review.comment}
+              </p>
+            )}
+            {review.course && (
+              <p className="mt-3 inline-flex rounded-md bg-accent/10 px-2 py-1 text-xs font-medium text-accent">
+                {formatCourse(review.course)}
               </p>
             )}
             <div className="mt-3 flex gap-4 text-xs text-muted dark:text-muted-dark">

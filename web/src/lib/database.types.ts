@@ -53,6 +53,7 @@ export interface TeacherCourseRow {
 export interface ReviewRow {
   id: string;
   teacher_id: string;
+  course_id: string | null;
   user_id: string | null;
   grading_score: number;
   attendance_score: number;

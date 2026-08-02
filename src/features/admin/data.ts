@@ -6,6 +6,7 @@ import type { PaperKind } from '@/features/papers/data';
 export interface AdminReview {
   id: string;
   teacherName: string;
+  courseName: string | null;
   teachingScore: number;
   gradingScore: number;
   attendanceScore: number;

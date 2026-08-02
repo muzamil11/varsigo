@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
     if (action === 'submitReview') {
       const userId = await getOrCreateUserId(supabase, identity);
       const teacherId = payload.teacherId;
+      const courseId = payload.courseId ? String(payload.courseId) : null;
       const comment = sanitizeText(payload.comment);
       if (!teacherId) throw new Error('Missing teacher id.');
       if (comment.length < 10) throw new Error('Review comment is too short.');
@@ -124,6 +125,17 @@ Deno.serve(async (req) => {
       const teachingScore = assertScore(payload.teachingScore, 'Teaching score');
       const gradingScore = assertScore(payload.gradingScore, 'Grading score');
       const attendanceScore = assertScore(payload.attendanceScore, 'Attendance score');
+
+      if (courseId) {
+        const { data: teacherCourse, error: teacherCourseError } = await supabase
+          .from('teacher_courses')
+          .select('id')
+          .eq('teacher_id', teacherId)
+          .eq('course_id', courseId)
+          .maybeSingle();
+        if (teacherCourseError) throw teacherCourseError;
+        if (!teacherCourse) throw new Error('Choose a valid course for this teacher.');
+      }
 
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
@@ -154,7 +166,7 @@ Deno.serve(async (req) => {
         throw new Error('You already submitted a very similar review for this teacher recently.');
       }
 
-      const { error } = await supabase.from('reviews').insert({
+      const reviewPayload: Record<string, unknown> = {
         teacher_id: teacherId,
         user_id: userId,
         teaching_score: teachingScore,
@@ -166,7 +178,10 @@ Deno.serve(async (req) => {
         moderation_priority: quality.priority,
         review_fingerprint: quality.fingerprint,
         approved: false,
-      });
+      };
+      if (courseId) reviewPayload.course_id = courseId;
+
+      const { error } = await supabase.from('reviews').insert(reviewPayload);
       if (error) throw error;
 
       return Response.json({ data: null }, { headers: corsHeaders });

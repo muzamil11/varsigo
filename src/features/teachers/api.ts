@@ -34,6 +34,7 @@ interface RawReviewDetailRow {
   is_anonymous: boolean;
   created_at: string;
   users: { name: string | null } | null;
+  courses: { id: string; code: string | null; name: string } | null;
 }
 
 interface RawTeacherCourseRow {
@@ -107,6 +108,33 @@ async function fetchCourseMapForTeachers(
   }
 
   return coursesByTeacher;
+}
+
+async function fetchApprovedReviewRows(teacherId: string): Promise<RawReviewDetailRow[]> {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select(
+      'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, users(name), courses(id, code, name)',
+    )
+    .eq('teacher_id', teacherId)
+    .eq('approved', true)
+    .order('created_at', { ascending: false });
+  if (!error) return (data ?? []) as unknown as RawReviewDetailRow[];
+  if (!isMissingSchemaError(error)) throw error;
+
+  const { data: fallbackData, error: fallbackError } = await supabase
+    .from('reviews')
+    .select(
+      'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, users(name)',
+    )
+    .eq('teacher_id', teacherId)
+    .eq('approved', true)
+    .order('created_at', { ascending: false });
+  if (fallbackError) throw fallbackError;
+  return ((fallbackData ?? []) as unknown as Omit<RawReviewDetailRow, 'courses'>[]).map((review) => ({
+    ...review,
+    courses: null,
+  }));
 }
 
 export async function fetchTeachers(departmentId?: string, courseId?: string): Promise<TeacherListItem[]> {
@@ -183,20 +211,11 @@ export async function fetchTeacherById(id: string): Promise<TeacherDetail> {
     const teacher = teacherRow as unknown as RawTeacherRow;
     const coursesByTeacher = await fetchCourseMapForTeachers([id]);
 
-    const { data: reviewRows, error: reviewError } = await supabase
-      .from('reviews')
-      .select(
-        'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, users(name)',
-      )
-      .eq('teacher_id', id)
-      .eq('approved', true)
-      .order('created_at', { ascending: false });
-    if (reviewError) throw reviewError;
-
-    const rawReviews = (reviewRows ?? []) as unknown as RawReviewDetailRow[];
+    const rawReviews = await fetchApprovedReviewRows(id);
     const reviews: TeacherReview[] = rawReviews.map((r) => ({
       id: r.id,
       author: r.is_anonymous ? 'Anonymous Student' : r.users?.name || 'Anonymous Student',
+      course: r.courses,
       comment: r.comment,
       teaching: r.teaching_score,
       grading: r.grading_score,
@@ -232,6 +251,7 @@ export async function fetchTeacherById(id: string): Promise<TeacherDetail> {
 
 export interface SubmitReviewInput {
   teacherId: string;
+  courseId?: string | null;
   userId: string;
   teachingScore: number;
   gradingScore: number;
@@ -247,6 +267,7 @@ export async function submitReview(input: SubmitReviewInput): Promise<void> {
   if (isReportReviewFunctionConfigured()) {
     return callReviewFunction<void>('submitReview', {
       teacherId: input.teacherId,
+      courseId: input.courseId ?? null,
       teachingScore: input.teachingScore,
       gradingScore: input.gradingScore,
       attendanceScore: input.attendanceScore,
@@ -288,7 +309,7 @@ export async function submitReview(input: SubmitReviewInput): Promise<void> {
       throw new Error('You already submitted a very similar review for this teacher recently.');
     }
 
-    const { error } = await supabase.from('reviews').insert({
+    const reviewPayload: Record<string, unknown> = {
       teacher_id: input.teacherId,
       user_id: input.userId,
       teaching_score: input.teachingScore,
@@ -300,7 +321,10 @@ export async function submitReview(input: SubmitReviewInput): Promise<void> {
       moderation_priority: quality.priority,
       review_fingerprint: quality.fingerprint,
       approved: false,
-    });
+    };
+    if (input.courseId) reviewPayload.course_id = input.courseId;
+
+    const { error } = await supabase.from('reviews').insert(reviewPayload);
     if (error) throw error;
   } catch (error) {
     throw new Error(toFriendlyError(error));

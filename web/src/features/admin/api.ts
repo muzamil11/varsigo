@@ -51,7 +51,12 @@ interface RawPendingReviewRow {
   is_anonymous: boolean;
   created_at: string;
   teachers: { name: string } | null;
+  courses: { code: string | null; name: string } | null;
   users: { email: string } | null;
+}
+
+function formatAdminCourse(course: { code: string | null; name: string }): string {
+  return course.code ? `${course.code} - ${course.name}` : course.name;
 }
 
 export async function fetchPendingReviews(adminEmail: string): Promise<AdminReview[]> {
@@ -60,7 +65,7 @@ export async function fetchPendingReviews(adminEmail: string): Promise<AdminRevi
     const primary = await supabase
       .from('reviews')
       .select(
-        'id, teaching_score, grading_score, attendance_score, comment, quality_flags, moderation_priority, reported, is_anonymous, created_at, teachers(name), users(email)',
+        'id, teaching_score, grading_score, attendance_score, comment, quality_flags, moderation_priority, reported, is_anonymous, created_at, teachers(name), courses(code, name), users(email)',
       )
       .eq('approved', false)
       .order('reported', { ascending: false })
@@ -84,6 +89,7 @@ export async function fetchPendingReviews(adminEmail: string): Promise<AdminRevi
     return ((data ?? []) as unknown as RawPendingReviewRow[]).map((r) => ({
       id: r.id,
       teacherName: r.teachers?.name ?? 'Unknown teacher',
+      courseName: r.courses ? formatAdminCourse(r.courses) : null,
       teachingScore: r.teaching_score,
       gradingScore: r.grading_score,
       attendanceScore: r.attendance_score,

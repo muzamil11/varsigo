@@ -4,8 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 
-import { Button, Card, Screen } from '@/components';
-import { submitReview } from '@/features/teachers/api';
+import { Button, Card, Chip, Screen } from '@/components';
+import { formatCourse } from '@/features/courses/types';
+import { fetchTeacherById, submitReview } from '@/features/teachers/api';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeColors } from '@/store/themeStore';
 
@@ -48,6 +49,9 @@ export default function AddReviewScreen() {
   const colors = useThemeColors();
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
 
+  const [teacherName, setTeacherName] = useState(name ?? null);
+  const [courses, setCourses] = useState<{ id: string; code: string | null; name: string }[]>([]);
+  const [courseId, setCourseId] = useState<string | null>(null);
   const [teaching, setTeaching] = useState(3);
   const [grading, setGrading] = useState(3);
   const [attendance, setAttendance] = useState(3);
@@ -64,6 +68,26 @@ export default function AddReviewScreen() {
         ? `Please write at least ${MIN_COMMENT_LENGTH} characters (${trimmedLength}/${MIN_COMMENT_LENGTH}).`
         : null;
 
+  React.useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    fetchTeacherById(id)
+      .then((teacher) => {
+        if (cancelled) return;
+        setTeacherName(teacher.name);
+        setCourses(teacher.courses);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTeacherName(name ?? null);
+          setCourses([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, name]);
+
   const handleSubmit = async () => {
     if (!id) return;
     const user = useAuthStore.getState().user;
@@ -78,6 +102,7 @@ export default function AddReviewScreen() {
     try {
       await submitReview({
         teacherId: id,
+        courseId,
         userId: user.id,
         teachingScore: teaching,
         gradingScore: grading,
@@ -107,7 +132,7 @@ export default function AddReviewScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <Text className="text-lg font-semibold text-foreground dark:text-foreground-dark">
-          {name ? `Review ${name}` : 'Write a Review'}
+          {teacherName ? `Review ${teacherName}` : 'Write a Review'}
         </Text>
       </View>
 
@@ -125,6 +150,28 @@ export default function AddReviewScreen() {
           <RatingSlider label="Grading" value={grading} onChange={setGrading} />
           <RatingSlider label="Attendance" value={attendance} onChange={setAttendance} />
         </Card>
+
+        {courses.length > 0 && (
+          <Card className="mt-4">
+            <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
+              Course context
+            </Text>
+            <Text className="mb-3 text-xs text-muted dark:text-muted-dark">
+              Optional. Pick the course this review is about.
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <Chip label="General" selected={courseId === null} onPress={() => setCourseId(null)} />
+              {courses.map((course) => (
+                <Chip
+                  key={course.id}
+                  label={formatCourse(course)}
+                  selected={courseId === course.id}
+                  onPress={() => setCourseId(course.id)}
+                />
+              ))}
+            </ScrollView>
+          </Card>
+        )}
 
         <Card className="mt-4">
           <Text className="mb-2 text-base font-semibold text-foreground dark:text-foreground-dark">
