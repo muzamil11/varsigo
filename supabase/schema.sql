@@ -68,6 +68,7 @@ create table if not exists teacher_courses (
 create table if not exists reviews (
   id uuid primary key default gen_random_uuid(),
   teacher_id uuid references teachers(id),
+  course_id uuid references courses(id) on delete set null,
   user_id uuid references users(id),
   grading_score int check (grading_score between 1 and 5),
   attendance_score int check (attendance_score between 1 and 5),
@@ -91,6 +92,11 @@ alter table reviews add column if not exists reported_count int default 0;
 alter table reviews add column if not exists quality_flags text[] default '{}';
 alter table reviews add column if not exists moderation_priority int default 0;
 alter table reviews add column if not exists review_fingerprint text;
+alter table reviews add column if not exists course_id uuid;
+alter table reviews drop constraint if exists reviews_course_id_fkey;
+alter table reviews
+  add constraint reviews_course_id_fkey
+  foreign key (course_id) references courses(id) on delete set null;
 
 create table if not exists uploads (
   id uuid primary key default gen_random_uuid(),
@@ -193,6 +199,7 @@ create index if not exists idx_courses_department_id on courses(department_id);
 create index if not exists idx_teacher_courses_teacher_id on teacher_courses(teacher_id);
 create index if not exists idx_teacher_courses_course_id on teacher_courses(course_id);
 create index if not exists idx_reviews_teacher_id on reviews(teacher_id);
+create index if not exists idx_reviews_course_id on reviews(course_id);
 create index if not exists idx_reviews_approved on reviews(approved);
 create index if not exists idx_reviews_moderation_priority on reviews(moderation_priority desc);
 create index if not exists idx_reviews_review_fingerprint on reviews(review_fingerprint);
