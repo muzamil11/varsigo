@@ -42,7 +42,7 @@ const STEPS = [
   {
     step: '2',
     title: 'Browse or contribute',
-    description: 'Read reviews and papers freely, or post your own once signed in.',
+    description: 'Browse public pages freely. Sign in to read or write reviews and upload papers.',
   },
   {
     step: '3',
