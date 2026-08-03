@@ -10,5 +10,9 @@
  *  Firebase ID token and the admin email server-side. */
 export function isAdminEmail(email: string | null | undefined): boolean {
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-  return Boolean(email && adminEmail && email === adminEmail);
+  const normalizedEmail = email?.trim().toLowerCase();
+  const normalizedAdminEmail = adminEmail?.trim().toLowerCase();
+  return Boolean(
+    normalizedEmail && normalizedAdminEmail && normalizedEmail === normalizedAdminEmail,
+  );
 }

@@ -15,6 +15,10 @@ function requiredEnv(name: string): string {
   return value;
 }
 
+function normalizeEmail(email: unknown): string {
+  return String(email ?? '').trim().toLowerCase();
+}
+
 async function verifyAdminEmail(authHeader: string | null): Promise<void> {
   const token = authHeader?.replace(/^Bearer\s+/i, '');
   if (!token) throw new Error('Missing Firebase token.');
@@ -32,7 +36,7 @@ async function verifyAdminEmail(authHeader: string | null): Promise<void> {
 
   const data = await response.json();
   const email = data?.users?.[0]?.email;
-  if (!response.ok || email !== adminEmail) {
+  if (!response.ok || normalizeEmail(email) !== normalizeEmail(adminEmail)) {
     throw new Error('Not authorized.');
   }
 }

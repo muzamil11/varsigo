@@ -4,7 +4,7 @@ import { Flag, LogIn, MessageSquareOff, Star } from 'lucide-react';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 
-import { Button, CardSkeletonList, StateMessage } from '@/components';
+import { Button, SkeletonBlock, StateMessage } from '@/components';
 import { formatCourse } from '@/features/courses/types';
 import { useAuthStore } from '@/store/authStore';
 import type { TeacherDetail } from './data';
@@ -86,7 +86,24 @@ export function ReviewsSection({ teacherId }: { teacherId: string }) {
     );
   }
 
-  if (loading) return <CardSkeletonList count={3} padded={false} />;
+  if (loading) {
+    return (
+      <div className="mt-8 rounded-2xl border border-line bg-card p-5 dark:border-line-dark dark:bg-card-dark">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <SkeletonBlock className="h-8 w-16" />
+            <SkeletonBlock className="mt-2 h-3 w-20" />
+          </div>
+          <SkeletonBlock className="h-11 w-32 rounded-xl" />
+        </div>
+        <div className="mt-6 space-y-3">
+          <SkeletonBlock className="h-4 w-full max-w-xl" />
+          <SkeletonBlock className="h-4 w-5/6 max-w-lg" />
+          <SkeletonBlock className="h-4 w-2/3 max-w-md" />
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return <StateMessage icon={MessageSquareOff} title="Couldn't load reviews" subtitle={error} />;
