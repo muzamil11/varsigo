@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React from 'react';
 
-import { CardSkeletonList, Screen, StateMessage } from '@/components';
+import { CardSkeletonList, PageShell, Screen, StateMessage } from '@/components';
 import { useAuthStore } from '@/store/authStore';
 
 const SECTIONS = [
@@ -31,9 +31,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!hasHydrated) {
     return (
       <Screen>
-        <div className="mx-auto max-w-5xl px-4 py-6">
+        <PageShell className="py-6">
           <CardSkeletonList padded={false} />
-        </div>
+        </PageShell>
       </Screen>
     );
   }
@@ -62,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <Screen>
-      <div className="mx-auto max-w-5xl px-4 py-6">
+      <PageShell className="py-6">
         <h1 className="mb-4 text-2xl font-bold text-foreground dark:text-foreground-dark">
           Admin
         </h1>
@@ -85,7 +85,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
         {children}
-      </div>
+      </PageShell>
     </Screen>
   );
 }

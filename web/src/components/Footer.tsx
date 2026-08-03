@@ -2,6 +2,8 @@ import { GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react';
 
+import { APP_CONTAINER_CLASS } from './Layout';
+
 const LINKS = [
   { href: '/teachers', label: 'Teachers' },
   { href: '/papers', label: 'Papers' },
@@ -12,7 +14,7 @@ const LINKS = [
 export function Footer() {
   return (
     <footer className="mt-24 border-t border-line dark:border-line-dark">
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 py-10 text-center sm:flex-row sm:justify-between sm:text-left">
+      <div className={`${APP_CONTAINER_CLASS} flex flex-col items-center gap-4 py-10 text-center sm:flex-row sm:justify-between sm:text-left`}>
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
             <GraduationCap size={16} color="#FFFFFF" />

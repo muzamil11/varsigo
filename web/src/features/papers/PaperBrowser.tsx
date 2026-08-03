@@ -14,7 +14,7 @@ import {
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { AnimatedListItem, Chip, SearchBar, StateMessage } from '@/components';
+import { AnimatedListItem, Chip, PageShell, SearchBar, StateMessage } from '@/components';
 import type { Department } from '@/features/departments/types';
 import { useAuthStore } from '@/store/authStore';
 import { fetchPapers } from './api';
@@ -96,7 +96,7 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
     : 'Sign in with Google to browse approved papers, download files, or upload useful study resources for other NED students.';
 
   return (
-    <div className="mx-auto w-full max-w-[1500px] px-4 py-8 sm:px-6 lg:px-8">
+    <PageShell>
       <section className="overflow-hidden rounded-2xl border border-line bg-card dark:border-line-dark dark:bg-card-dark">
         <div className="border-b border-line bg-accent/10 px-5 py-7 dark:border-line-dark sm:px-7 lg:px-9">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
@@ -297,6 +297,6 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
           </div>
         )}
       </section>
-    </div>
+    </PageShell>
   );
 }

@@ -15,7 +15,7 @@ import {
 import Link from 'next/link';
 import React from 'react';
 
-import { Screen } from '@/components';
+import { PageShell, Screen } from '@/components';
 import { FAQS } from '@/features/faq/data';
 
 export const revalidate = 300;
@@ -89,10 +89,10 @@ const QUICK_FAQS = FAQS.slice(0, 4);
 export default function HomePage() {
   return (
     <Screen>
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <PageShell className="py-10">
         <section className="rounded-2xl border border-line bg-card px-5 py-10 dark:border-line-dark dark:bg-card-dark sm:px-8 lg:px-12">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent text-white">
+          <div className="max-w-4xl">
+            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent text-white">
               <GraduationCap size={28} />
             </div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
@@ -101,11 +101,11 @@ export default function HomePage() {
             <h1 className="text-4xl font-bold tracking-tight text-foreground dark:text-foreground-dark sm:text-5xl">
               Teacher reviews, papers, and campus answers in one place
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted dark:text-muted-dark sm:text-lg">
+            <p className="mt-4 max-w-3xl text-base leading-7 text-muted dark:text-muted-dark sm:text-lg">
               Varsigo helps students find course-linked teacher context, approved study resources,
               and practical FAQ answers without digging through scattered links.
             </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/teachers"
                 className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 text-base font-semibold text-white"
@@ -279,7 +279,7 @@ export default function HomePage() {
             </Link>
           </div>
         </section>
-      </div>
+      </PageShell>
     </Screen>
   );
 }

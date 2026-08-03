@@ -3,6 +3,7 @@ export * from './Button';
 export * from './Card';
 export * from './ErrorBoundary';
 export * from './Chip';
+export * from './Layout';
 export * from './Screen';
 export * from './SearchBar';
 export * from './Skeleton';

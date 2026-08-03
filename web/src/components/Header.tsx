@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import { ThemeToggle } from '@/components';
 import { useAuthStore } from '@/store/authStore';
 import { signOutGoogle } from '@/features/auth/google';
+import { APP_CONTAINER_CLASS } from './Layout';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
@@ -55,7 +56,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-background/90 backdrop-blur-xl dark:border-line-dark dark:bg-background-dark/90">
-      <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
+      <div className={`${APP_CONTAINER_CLASS} flex items-center gap-3 py-3`}>
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent shadow-lg shadow-accent/20">
             <GraduationCap size={18} color="#FFFFFF" />
@@ -65,7 +66,7 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="hidden flex-1 items-center justify-center gap-1 md:flex">
+        <nav className="ml-4 hidden items-center gap-1 md:flex">
           <div className="flex items-center gap-1 rounded-full border border-line bg-card/70 p-1 dark:border-line-dark dark:bg-card-dark/70">
           {NAV_LINKS.map((link) => {
             const active = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);

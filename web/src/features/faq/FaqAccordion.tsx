@@ -3,7 +3,7 @@
 import { ChevronDown, FileQuestion, HelpCircle, Search } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
-import { Chip, SearchBar, StateMessage } from '@/components';
+import { Chip, PageShell, SearchBar, StateMessage } from '@/components';
 import { FAQS, FAQ_CATEGORIES } from './data';
 
 export function FaqAccordion() {
@@ -30,16 +30,16 @@ export function FaqAccordion() {
   );
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-3xl text-center">
-        <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-semibold text-accent">
+    <PageShell>
+      <div className="max-w-3xl">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-semibold text-accent">
           <HelpCircle size={16} />
           Help Center & FAQ
         </div>
         <h1 className="text-4xl font-bold tracking-tight text-foreground dark:text-foreground-dark">
           Frequently Asked Questions
         </h1>
-        <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-muted dark:text-muted-dark">
+        <p className="mt-3 max-w-2xl text-base leading-7 text-muted dark:text-muted-dark">
           Quick answers about admissions, exams, academic documents, fees, and Varsigo account
           behavior.
         </p>
@@ -65,7 +65,7 @@ export function FaqAccordion() {
         ))}
       </div>
 
-      <div className="mx-auto mt-8 max-w-3xl">
+      <div className="mt-8">
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search questions..." />
 
         <div className="mt-4 flex flex-wrap">
@@ -132,6 +132,6 @@ export function FaqAccordion() {
           )}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

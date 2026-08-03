@@ -13,7 +13,7 @@ import {
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { Chip, SearchBar, StateMessage } from '@/components';
+import { Chip, PageShell, SearchBar, StateMessage } from '@/components';
 import { useAuthStore } from '@/store/authStore';
 import { fetchLostFoundItems, submitLostFoundItem } from './api';
 import { LOST_FOUND_KIND_LABELS, type LostFoundInput, type LostFoundItem, type LostFoundKind } from './data';
@@ -133,7 +133,7 @@ export function LostFoundPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1500px] px-4 py-8 sm:px-6 lg:px-8">
+    <PageShell>
       <section className="rounded-2xl border border-line bg-card dark:border-line-dark dark:bg-card-dark">
         <div className="border-b border-line bg-accent/10 px-5 py-7 dark:border-line-dark sm:px-7 lg:px-9">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -363,7 +363,7 @@ export function LostFoundPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
 
