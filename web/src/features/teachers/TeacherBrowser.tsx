@@ -4,7 +4,7 @@ import { AlertTriangle, BadgeCheck, Search as SearchIcon, Users } from 'lucide-r
 import Link from 'next/link';
 import React, { useMemo, useState } from 'react';
 
-import { AnimatedListItem, Card, Chip, SearchBar, StateMessage } from '@/components';
+import { AnimatedListItem, Card, Chip, PageShell, SearchBar, StateMessage } from '@/components';
 import { formatCourse } from '@/features/courses/types';
 import type { Department } from '@/features/departments/types';
 
@@ -58,7 +58,7 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
   }, [teachers, search, departmentId, departments]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+    <PageShell className="py-10">
       <h1 className="mb-1 text-3xl font-bold text-foreground dark:text-foreground-dark">
         Teachers
       </h1>
@@ -66,7 +66,7 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
         Sign in to see ratings and reviews for any teacher.
       </p>
 
-      <div className="max-w-xl">
+      <div className="max-w-3xl">
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search teachers, courses…" />
       </div>
 
@@ -92,7 +92,7 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
             subtitle="Try a different search or filter."
           />
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {filtered.map((teacher, index) => (
               <AnimatedListItem key={teacher.id} index={index}>
                 <Link href={`/teachers/${teacher.id}`} className="block h-full">
@@ -130,6 +130,6 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }
