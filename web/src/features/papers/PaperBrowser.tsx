@@ -9,6 +9,8 @@ import {
   Image as ImageIcon,
   LogIn,
   Search as SearchIcon,
+  ShieldCheck,
+  UploadCloud,
 } from 'lucide-react';
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -42,6 +44,7 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
     hasHydrated && isAuthenticated && refreshState !== 'settled' && papers.length === 0;
   const refreshingPapers =
     hasHydrated && isAuthenticated && refreshState === 'loading' && papers.length > 0;
+  const approvedCount = papers.length;
 
   useEffect(() => {
     if (!hasHydrated || !isAuthenticated) return;
@@ -89,35 +92,55 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
   }, [papers, search, departmentId, kind, departments]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="mb-1 text-3xl font-bold text-foreground dark:text-foreground-dark">
-            Past Papers &amp; Notes
-          </h1>
-          <p className="text-sm text-muted dark:text-muted-dark">
-            Sign in with Google to browse approved papers, download files, or upload your own.
-          </p>
-        </div>
-        {hasHydrated && isAuthenticated && (
-          <div className="flex flex-wrap items-center gap-3">
-            {refreshingPapers && (
-              <span className="text-xs font-medium text-muted dark:text-muted-dark">
-                Refreshing...
-              </span>
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <section className="overflow-hidden rounded-2xl border border-line bg-card dark:border-line-dark dark:bg-card-dark">
+        <div className="border-b border-line bg-accent/10 px-5 py-7 dark:border-line-dark sm:px-7 lg:px-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-background px-3 py-1.5 text-xs font-semibold text-accent dark:bg-background-dark">
+                <FileText size={14} />
+                NED resource library
+              </div>
+              <h1 className="text-4xl font-bold tracking-tight text-foreground dark:text-foreground-dark">
+                Past Papers &amp; Notes
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted dark:text-muted-dark sm:text-base">
+                Sign in with Google to browse approved papers, download files, or upload useful
+                study resources for other NED students.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-line bg-background px-3 py-1.5 text-xs font-semibold text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark">
+                  <ShieldCheck size={14} className="text-accent" />
+                  Admin approved
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-line bg-background px-3 py-1.5 text-xs font-semibold text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark">
+                  <FileText size={14} className="text-accent" />
+                  {approvedCount} approved
+                </span>
+              </div>
+            </div>
+
+            {hasHydrated && isAuthenticated && (
+              <div className="flex flex-wrap items-center gap-3">
+                {refreshingPapers && (
+                  <span className="text-xs font-medium text-muted dark:text-muted-dark">
+                    Refreshing...
+                  </span>
+                )}
+                <Link
+                  href={uploadHref}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white shadow-lg shadow-accent/20"
+                >
+                  <UploadCloud size={17} />
+                  Upload paper
+                </Link>
+              </div>
             )}
-            <Link
-              href={uploadHref}
-              className="inline-flex w-fit items-center justify-center rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white"
-            >
-              Upload paper
-            </Link>
           </div>
-        )}
-      </div>
+        </div>
 
       {hasHydrated && !isAuthenticated && (
-        <div className="rounded-2xl border border-line bg-card p-8 text-center dark:border-line-dark dark:bg-card-dark">
+        <div className="m-5 rounded-2xl border border-line bg-background p-8 text-center dark:border-line-dark dark:bg-background-dark">
           <LogIn className="mx-auto text-muted dark:text-muted-dark" size={30} />
           <p className="mt-3 text-lg font-semibold text-foreground dark:text-foreground-dark">
             Sign in to view papers
@@ -136,32 +159,33 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
       )}
 
       {hasHydrated && !isAuthenticated ? null : (
-        <>
+        <div className="p-5 sm:p-7 lg:p-8">
+          <div className="rounded-2xl border border-line bg-background p-4 dark:border-line-dark dark:bg-background-dark">
+            <div className="max-w-2xl">
+              <SearchBar value={search} onChangeText={setSearch} placeholder="Search papers, subjects..." />
+            </div>
 
-      <div className="max-w-xl">
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Search papers, subjects..." />
-      </div>
-
-      <div className="mt-4 flex flex-wrap">
-        <Chip label="All types" selected={kind === 'All'} onPress={() => setKind('All')} />
-        <Chip
-          label="Past Papers"
-          selected={kind === 'past_paper'}
-          onPress={() => setKind('past_paper')}
-        />
-        <Chip label="Notes" selected={kind === 'notes'} onPress={() => setKind('notes')} />
-      </div>
-      <div className="mt-2 flex flex-wrap">
-        <Chip label="All departments" selected={!departmentId} onPress={() => setDepartmentId(null)} />
-        {departments.map((d) => (
-          <Chip
-            key={d.id}
-            label={d.name}
-            selected={departmentId === d.id}
-            onPress={() => setDepartmentId(d.id)}
-          />
-        ))}
-      </div>
+            <div className="mt-4 flex flex-wrap">
+              <Chip label="All types" selected={kind === 'All'} onPress={() => setKind('All')} />
+              <Chip
+                label="Past Papers"
+                selected={kind === 'past_paper'}
+                onPress={() => setKind('past_paper')}
+              />
+              <Chip label="Notes" selected={kind === 'notes'} onPress={() => setKind('notes')} />
+            </div>
+            <div className="mt-2 flex flex-wrap">
+              <Chip label="All departments" selected={!departmentId} onPress={() => setDepartmentId(null)} />
+              {departments.map((d) => (
+                <Chip
+                  key={d.id}
+                  label={d.name}
+                  selected={departmentId === d.id}
+                  onPress={() => setDepartmentId(d.id)}
+                />
+              ))}
+            </div>
+          </div>
 
       <div className="mt-6">
         {showInitialLoading ? (
@@ -197,7 +221,7 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {filtered.map((paper, index) => {
               const fileType = getPaperFileType(paper.fileUrl);
               const isPastPaper = paper.kind === 'past_paper';
@@ -280,8 +304,9 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
           </div>
         )}
       </div>
-        </>
+        </div>
       )}
+      </section>
     </div>
   );
 }

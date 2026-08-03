@@ -53,10 +53,10 @@ export function Header() {
   );
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-background/95 backdrop-blur dark:border-line-dark dark:bg-background-dark/95">
-      <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+    <header className="sticky top-0 z-40 border-b border-line bg-background/90 backdrop-blur-xl dark:border-line-dark dark:bg-background-dark/90">
+      <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="flex shrink-0 items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent shadow-lg shadow-accent/20">
             <GraduationCap size={18} color="#FFFFFF" />
           </span>
           <span className="text-lg font-bold text-foreground dark:text-foreground-dark">
@@ -65,15 +65,16 @@ export function Header() {
         </Link>
 
         <nav className="hidden flex-1 items-center justify-center gap-1 md:flex">
+          <div className="flex items-center gap-1 rounded-full border border-line bg-card/70 p-1 dark:border-line-dark dark:bg-card-dark/70">
           {NAV_LINKS.map((link) => {
             const active = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${
                   active
-                    ? 'bg-accent/10 text-accent'
+                    ? 'bg-accent text-white'
                     : 'text-muted hover:text-foreground dark:text-muted-dark dark:hover:text-foreground-dark'
                 }`}
               >
@@ -84,9 +85,9 @@ export function Header() {
           {hasHydrated && isAdmin && (
             <Link
               href="/admin"
-              className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium ${
+              className={`flex items-center gap-1 rounded-full px-3.5 py-1.5 text-sm font-medium ${
                 pathname.startsWith('/admin')
-                  ? 'bg-accent/10 text-accent'
+                  ? 'bg-accent text-white'
                   : 'text-muted hover:text-foreground dark:text-muted-dark dark:hover:text-foreground-dark'
               }`}
             >
@@ -94,6 +95,7 @@ export function Header() {
               Admin
             </Link>
           )}
+          </div>
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
