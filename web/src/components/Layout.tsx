@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const APP_CONTAINER_CLASS = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8';
+export const APP_CONTAINER_CLASS = 'mx-auto w-full max-w-[1680px] px-4 sm:px-6 lg:px-8';
 
 export function PageShell({
   children,
