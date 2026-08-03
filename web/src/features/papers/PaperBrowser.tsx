@@ -38,7 +38,10 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
   const uploadHref = '/papers/upload';
   const isFiltered = Boolean(search.trim() || departmentId || kind !== 'All');
   const visibleError = clientError ?? error;
-  const loadingPapers = hasHydrated && isAuthenticated && refreshState !== 'settled';
+  const showInitialLoading =
+    hasHydrated && isAuthenticated && refreshState !== 'settled' && papers.length === 0;
+  const refreshingPapers =
+    hasHydrated && isAuthenticated && refreshState === 'loading' && papers.length > 0;
 
   useEffect(() => {
     if (!hasHydrated || !isAuthenticated) return;
@@ -97,12 +100,19 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
           </p>
         </div>
         {hasHydrated && isAuthenticated && (
-          <Link
-            href={uploadHref}
-            className="inline-flex w-fit items-center justify-center rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white"
-          >
-            Upload paper
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            {refreshingPapers && (
+              <span className="text-xs font-medium text-muted dark:text-muted-dark">
+                Refreshing...
+              </span>
+            )}
+            <Link
+              href={uploadHref}
+              className="inline-flex w-fit items-center justify-center rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white"
+            >
+              Upload paper
+            </Link>
+          </div>
         )}
       </div>
 
@@ -154,7 +164,7 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
       </div>
 
       <div className="mt-6">
-        {loadingPapers ? (
+        {showInitialLoading ? (
           <div className="rounded-2xl border border-line bg-card p-8 text-center dark:border-line-dark dark:bg-card-dark">
             <StateMessage
               icon={SearchIcon}
