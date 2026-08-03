@@ -8,11 +8,12 @@ import {
   Search as SearchIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { AnimatedListItem, Card, Chip, SearchBar, StateMessage } from '@/components';
 import type { Department } from '@/features/departments/types';
 import { useAuthStore } from '@/store/authStore';
+import { fetchPapers } from './api';
 import { PAPER_KIND_LABELS, getPaperFileType, type Paper } from './data';
 
 interface PaperBrowserProps {
@@ -21,15 +22,48 @@ interface PaperBrowserProps {
   error?: string | null;
 }
 
-export function PaperBrowser({ papers, departments, error }: PaperBrowserProps) {
+export function PaperBrowser({ papers: initialPapers, departments, error }: PaperBrowserProps) {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  const [papers, setPapers] = useState(initialPapers);
+  const [refreshState, setRefreshState] = useState<'idle' | 'loading' | 'settled'>('idle');
+  const [clientError, setClientError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [kind, setKind] = useState<'All' | 'past_paper' | 'notes'>('All');
   const loginHref = '/login?redirect=/papers';
   const uploadHref = '/papers/upload';
   const isFiltered = Boolean(search.trim() || departmentId || kind !== 'All');
+  const visibleError = clientError ?? error;
+  const loadingPapers = hasHydrated && isAuthenticated && refreshState !== 'settled';
+
+  useEffect(() => {
+    if (!hasHydrated || !isAuthenticated) return;
+
+    let cancelled = false;
+    void Promise.resolve().then(() => {
+      if (!cancelled) {
+        setRefreshState('loading');
+        setClientError(null);
+      }
+    });
+    fetchPapers()
+      .then((freshPapers) => {
+        if (!cancelled) setPapers(freshPapers);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setClientError(err instanceof Error ? err.message : 'Failed to load papers.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setRefreshState('settled');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydrated, isAuthenticated]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -117,8 +151,16 @@ export function PaperBrowser({ papers, departments, error }: PaperBrowserProps) 
       </div>
 
       <div className="mt-6">
-        {error ? (
-          <StateMessage icon={AlertTriangle} title="Couldn't load papers" subtitle={error} />
+        {loadingPapers ? (
+          <div className="rounded-2xl border border-line bg-card p-8 text-center dark:border-line-dark dark:bg-card-dark">
+            <StateMessage
+              icon={SearchIcon}
+              title="Loading approved papers"
+              subtitle="Checking the latest approved uploads."
+            />
+          </div>
+        ) : visibleError ? (
+          <StateMessage icon={AlertTriangle} title="Couldn't load papers" subtitle={visibleError} />
         ) : filtered.length === 0 ? (
           <div className="rounded-2xl border border-line bg-card p-8 text-center dark:border-line-dark dark:bg-card-dark">
             <StateMessage
