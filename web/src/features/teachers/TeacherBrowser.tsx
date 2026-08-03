@@ -22,12 +22,27 @@ interface TeacherBrowserProps {
   error?: string | null;
 }
 
+function normalizeSearchValue(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\b(dr|mr|ms|mrs|prof)\.?\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function matchesSearch(text: string | null | undefined, query: string): boolean {
+  const normalized = normalizeSearchValue(text ?? '');
+  if (!normalized) return false;
+  return normalized.includes(query) || query.split(' ').every((part) => normalized.includes(part));
+}
+
 export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserProps) {
   const [search, setSearch] = useState('');
   const [departmentId, setDepartmentId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = normalizeSearchValue(search);
     return teachers.filter((t) => {
       if (departmentId) {
         const dept = departments.find((d) => d.id === departmentId);
@@ -35,9 +50,9 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
       }
       if (!q) return true;
       return (
-        t.name.toLowerCase().includes(q) ||
-        (t.department ?? '').toLowerCase().includes(q) ||
-        t.courses.some((c) => c.name.toLowerCase().includes(q) || (c.code ?? '').toLowerCase().includes(q))
+        matchesSearch(t.name, q) ||
+        matchesSearch(t.department, q) ||
+        t.courses.some((c) => matchesSearch(c.name, q) || matchesSearch(c.code, q) || matchesSearch(formatCourse(c), q))
       );
     });
   }, [teachers, search, departmentId, departments]);
@@ -82,17 +97,20 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
               <AnimatedListItem key={teacher.id} index={index}>
                 <Link href={`/teachers/${teacher.id}`} className="block h-full">
                   <Card className="h-full">
-                    <div className="flex items-center">
+                    <div className="flex items-start">
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/10">
                         <Users size={20} className="text-accent" />
                       </div>
-                      <div className="ml-3 flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="truncate font-semibold text-foreground dark:text-foreground-dark">
+                      <div className="ml-3 min-w-0 flex-1">
+                        <div className="flex items-start gap-1.5">
+                          <p
+                            className="break-words font-semibold leading-snug text-foreground dark:text-foreground-dark"
+                            title={teacher.name}
+                          >
                             {teacher.name}
                           </p>
                           {teacher.verificationStatus === 'admin_verified' && (
-                            <BadgeCheck size={14} className="shrink-0 text-accent" />
+                            <BadgeCheck size={14} className="mt-0.5 shrink-0 text-accent" />
                           )}
                         </div>
                         <p className="truncate text-sm text-muted dark:text-muted-dark">

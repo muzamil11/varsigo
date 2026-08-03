@@ -65,6 +65,21 @@ function sortTeachers(teachers: TeacherListItem[], sortBy: SortOption): TeacherL
   }
 }
 
+function normalizeSearchValue(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\b(dr|mr|ms|mrs|prof)\.?\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function matchesSearch(text: string | null | undefined, query: string): boolean {
+  const normalized = normalizeSearchValue(text ?? '');
+  if (!normalized) return false;
+  return normalized.includes(query) || query.split(' ').every((part) => normalized.includes(part));
+}
+
 export default function TeachersScreen() {
   const router = useRouter();
   const colors = useThemeColors();
@@ -116,16 +131,17 @@ export default function TeachersScreen() {
   );
 
   const filtered = useMemo(() => {
-    const search = query.trim().toLowerCase();
+    const search = normalizeSearchValue(query);
     const matches = teachers.filter((t) => {
       if (!search) return true;
       return (
-        t.name.toLowerCase().includes(search) ||
-        (t.department ?? '').toLowerCase().includes(search) ||
+        matchesSearch(t.name, search) ||
+        matchesSearch(t.department, search) ||
         t.courses.some(
           (course) =>
-            course.name.toLowerCase().includes(search) ||
-            (course.code ?? '').toLowerCase().includes(search),
+            matchesSearch(course.name, search) ||
+            matchesSearch(course.code, search) ||
+            matchesSearch(formatCourse(course), search),
         )
       );
     });
