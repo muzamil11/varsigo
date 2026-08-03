@@ -36,7 +36,7 @@ const FEATURES = [
     href: '/papers',
     icon: FileText,
     title: 'Past Papers & Notes',
-    description: 'Browse approved papers freely and upload your own after Google sign-in.',
+    description: 'Sign in to browse approved papers, download files, and upload your own.',
   },
   {
     href: '/faq',
@@ -56,7 +56,7 @@ const JOURNEY = [
   {
     icon: Search,
     title: 'Find what you need',
-    description: 'Search teachers, courses, papers, and FAQs from one student-focused platform.',
+    description: 'Search teachers, courses, FAQs, and signed-in paper resources from one platform.',
   },
   {
     icon: GraduationCap,
@@ -80,7 +80,7 @@ const TRUST_POINTS = [
 const QUICK_FAQS = [
   'How do I upload a paper?',
   'Why are reviews checked first?',
-  'Can I browse papers without signing in?',
+  'Why do papers require sign-in?',
   'How do I suggest a missing teacher?',
 ];
 
@@ -260,7 +260,7 @@ export default function HomePage() {
           </h2>
           <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted dark:text-muted-dark">
             Upload useful papers, review teachers with course context, and report anything that
-            needs moderation. Good data makes the platform valuable for everyone.
+            needs moderation. Some areas require Google sign-in so the platform stays accountable.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link

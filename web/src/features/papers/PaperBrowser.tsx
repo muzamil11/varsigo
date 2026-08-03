@@ -1,6 +1,12 @@
 'use client';
 
-import { AlertTriangle, FileText, Image as ImageIcon, Search as SearchIcon } from 'lucide-react';
+import {
+  AlertTriangle,
+  FileText,
+  Image as ImageIcon,
+  LogIn,
+  Search as SearchIcon,
+} from 'lucide-react';
 import Link from 'next/link';
 import React, { useMemo, useState } from 'react';
 
@@ -21,7 +27,8 @@ export function PaperBrowser({ papers, departments, error }: PaperBrowserProps) 
   const [search, setSearch] = useState('');
   const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [kind, setKind] = useState<'All' | 'past_paper' | 'notes'>('All');
-  const uploadHref = isAuthenticated ? '/papers/upload' : '/login?redirect=/papers/upload';
+  const loginHref = '/login?redirect=/papers';
+  const uploadHref = '/papers/upload';
   const isFiltered = Boolean(search.trim() || departmentId || kind !== 'All');
 
   const filtered = useMemo(() => {
@@ -49,18 +56,40 @@ export function PaperBrowser({ papers, departments, error }: PaperBrowserProps) 
             Past Papers &amp; Notes
           </h1>
           <p className="text-sm text-muted dark:text-muted-dark">
-            Approved papers are free to browse and download. Sign in only when you want to upload.
+            Sign in with Google to browse approved papers, download files, or upload your own.
           </p>
         </div>
-        {hasHydrated && (
+        {hasHydrated && isAuthenticated && (
           <Link
             href={uploadHref}
             className="inline-flex w-fit items-center justify-center rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white"
           >
-            {isAuthenticated ? 'Upload paper' : 'Sign in to upload'}
+            Upload paper
           </Link>
         )}
       </div>
+
+      {hasHydrated && !isAuthenticated && (
+        <div className="rounded-2xl border border-line bg-card p-8 text-center dark:border-line-dark dark:bg-card-dark">
+          <LogIn className="mx-auto text-muted dark:text-muted-dark" size={30} />
+          <p className="mt-3 text-lg font-semibold text-foreground dark:text-foreground-dark">
+            Sign in to view papers
+          </p>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted dark:text-muted-dark">
+            Past papers and notes are available to signed-in students so uploads, downloads, and
+            moderation stay tied to real accounts.
+          </p>
+          <Link
+            href={loginHref}
+            className="mt-5 inline-flex rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-white"
+          >
+            Continue with Google
+          </Link>
+        </div>
+      )}
+
+      {hasHydrated && !isAuthenticated ? null : (
+        <>
 
       <div className="max-w-xl">
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search papers, subjects..." />
@@ -108,7 +137,7 @@ export function PaperBrowser({ papers, departments, error }: PaperBrowserProps) 
                 href={uploadHref}
                 className="mt-5 inline-flex rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white"
               >
-                {isAuthenticated ? 'Upload the first paper' : 'Sign in to upload a paper'}
+                Upload the first paper
               </Link>
             )}
           </div>
@@ -155,6 +184,8 @@ export function PaperBrowser({ papers, departments, error }: PaperBrowserProps) 
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }
