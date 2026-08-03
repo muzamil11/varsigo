@@ -31,18 +31,18 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-background/90 backdrop-blur dark:border-line-dark dark:bg-background-dark/90">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent">
+    <header className="sticky top-0 z-40 border-b border-line bg-background/95 backdrop-blur dark:border-line-dark dark:bg-background-dark/95">
+      <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+        <Link href="/" className="flex shrink-0 items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent">
             <GraduationCap size={18} color="#FFFFFF" />
           </span>
-          <span className="text-lg font-bold text-foreground dark:text-foreground-dark">
+          <span className="hidden text-lg font-bold text-foreground min-[380px]:inline dark:text-foreground-dark">
             Varsigo
           </span>
         </Link>
 
-        <nav className="flex flex-1 flex-wrap items-center gap-1">
+        <nav className="flex flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap px-1">
           {NAV_LINKS.map((link) => {
             const active = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
             return (
@@ -74,7 +74,7 @@ export function Header() {
           )}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2">
           <ThemeToggle />
           {!hasHydrated ? null : isAuthenticated ? (
             <button
@@ -89,7 +89,7 @@ export function Header() {
           ) : (
             <Link
               href={`/login?redirect=${encodeURIComponent(pathname)}`}
-              className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-white"
+              className="rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-white sm:px-4"
             >
               Sign in
             </Link>

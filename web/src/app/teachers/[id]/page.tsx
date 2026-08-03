@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import React from 'react';
 
 import { Screen } from '@/components';
+import { formatCourse } from '@/features/courses/types';
 import { ReviewsSection } from '@/features/teachers/ReviewsSection';
 import { fetchTeacherPublicById } from '@/features/teachers/api';
 
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const teacher = await fetchTeacherPublicById(id);
     return {
       title: teacher.name,
-      description: `${teacher.name}${teacher.department ? ` — ${teacher.department}` : ''} at NED University. Sign in to see student ratings and reviews.`,
+      description: `${teacher.name}${teacher.department ? ` - ${teacher.department}` : ''} at NED University. Sign in to see student ratings and reviews.`,
     };
   } catch {
     return { title: 'Teacher' };
@@ -64,7 +65,7 @@ export default async function TeacherDetailPage({ params }: Props) {
                 key={course.id}
                 className="rounded-full border border-line bg-card px-3 py-1 text-xs text-muted dark:border-line-dark dark:bg-card-dark dark:text-muted-dark"
               >
-                {course.code ? `${course.code} — ${course.name}` : course.name}
+                {formatCourse(course)}
               </span>
             ))}
           </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import React, { useMemo, useState } from 'react';
 
 import { AnimatedListItem, Card, Chip, SearchBar, StateMessage } from '@/components';
+import { formatCourse } from '@/features/courses/types';
 import type { Department } from '@/features/departments/types';
 
 export interface PublicTeacherListItem {
@@ -101,7 +102,7 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
                     </div>
                     {teacher.courses.length > 0 && (
                       <p className="mt-3 line-clamp-2 text-xs text-muted dark:text-muted-dark">
-                        {teacher.courses.map((c) => c.code ?? c.name).join(', ')}
+                        {teacher.courses.map(formatCourse).join(', ')}
                       </p>
                     )}
                   </Card>
