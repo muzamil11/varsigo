@@ -2,6 +2,9 @@
 
 import {
   AlertTriangle,
+  CalendarDays,
+  Download,
+  ExternalLink,
   FileText,
   Image as ImageIcon,
   LogIn,
@@ -187,39 +190,80 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((paper, index) => {
               const fileType = getPaperFileType(paper.fileUrl);
+              const isPastPaper = paper.kind === 'past_paper';
               return (
                 <AnimatedListItem key={paper.id} index={index}>
-                  <a
-                    href={paper.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block h-full"
-                  >
-                    <Card className="h-full">
-                      <div className="flex items-center">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/10">
+                  <Card className="flex h-full flex-col overflow-hidden p-0">
+                    <div
+                      className={`border-b px-4 py-3 dark:border-line-dark ${
+                        isPastPaper
+                          ? 'border-accent/20 bg-accent/10'
+                          : 'border-line bg-background dark:bg-background-dark'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-accent">
+                          {PAPER_KIND_LABELS[paper.kind]}
+                        </span>
+                        {paper.year && (
+                          <span className="rounded-full border border-line bg-card px-2.5 py-1 text-xs font-semibold text-foreground dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark">
+                            {paper.year}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-1 flex-col p-4">
+                      <div className="mb-4 flex h-28 items-center justify-center rounded-xl border border-line bg-background dark:border-line-dark dark:bg-background-dark">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10">
                           {fileType === 'pdf' ? (
-                            <FileText size={20} className="text-accent" />
+                            <FileText size={26} className="text-accent" />
                           ) : (
-                            <ImageIcon size={20} className="text-accent" />
+                            <ImageIcon size={26} className="text-accent" />
                           )}
                         </div>
-                        <div className="ml-3 min-w-0 flex-1">
-                          <p className="truncate font-semibold text-foreground dark:text-foreground-dark">
-                            {paper.title}
-                          </p>
-                          <p className="truncate text-sm text-muted dark:text-muted-dark">
-                            {paper.subject} - {PAPER_KIND_LABELS[paper.kind]}
-                            {paper.year ? ` - ${paper.year}` : ''}
-                          </p>
+                      </div>
+
+                      <h2 className="line-clamp-2 text-base font-bold text-foreground dark:text-foreground-dark">
+                        {paper.title}
+                      </h2>
+                      <p className="mt-2 line-clamp-2 text-sm text-muted dark:text-muted-dark">
+                        {paper.subject}
+                      </p>
+                      <div className="mt-4 space-y-2 text-xs text-muted dark:text-muted-dark">
+                        <div className="flex items-center gap-2">
+                          <FileText size={14} className="text-accent" />
+                          <span>{paper.department ?? 'General'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CalendarDays size={14} className="text-accent" />
+                          <span>
+                            Uploaded by {paper.uploaderName} on {paper.createdAt}
+                          </span>
                         </div>
                       </div>
-                      <p className="mt-3 truncate text-xs text-muted dark:text-muted-dark">
-                        {paper.department ?? 'General'} - Uploaded by {paper.uploaderName} -{' '}
-                        {paper.createdAt}
-                      </p>
-                    </Card>
-                  </a>
+
+                      <div className="mt-5 grid grid-cols-2 gap-2">
+                        <a
+                          href={paper.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-line text-sm font-semibold text-foreground dark:border-line-dark dark:text-foreground-dark"
+                        >
+                          <ExternalLink size={15} />
+                          View
+                        </a>
+                        <a
+                          href={paper.fileUrl}
+                          download
+                          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent text-sm font-semibold text-white"
+                        >
+                          <Download size={15} />
+                          Download
+                        </a>
+                      </div>
+                    </div>
+                  </Card>
                 </AnimatedListItem>
               );
             })}
