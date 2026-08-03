@@ -58,6 +58,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="lost-found"
+        options={{
+          title: 'Lost',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="search-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="admin"
         options={{
           title: 'Admin',

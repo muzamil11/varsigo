@@ -77,6 +77,30 @@ Deno.serve(async (req) => {
       case 'rejectUpload':
         ({ error } = await supabase.from('uploads').delete().eq('id', payload.uploadId));
         break;
+      case 'listPendingLostFound': {
+        const { data, error: listError } = await supabase
+          .from('lost_found_items')
+          .select(
+            'id, kind, item_name, description, university, campus, location, contact_name, whatsapp, email, photo_url, created_at',
+          )
+          .eq('status', 'pending')
+          .eq('approved', false)
+          .order('created_at', { ascending: false });
+        if (listError) throw listError;
+        return Response.json({ data: data ?? [] }, { headers: corsHeaders });
+      }
+      case 'approveLostFoundItem':
+        ({ error } = await supabase
+          .from('lost_found_items')
+          .update({ approved: true, status: 'approved', approved_at: new Date().toISOString() })
+          .eq('id', payload.itemId));
+        break;
+      case 'rejectLostFoundItem':
+        ({ error } = await supabase
+          .from('lost_found_items')
+          .update({ approved: false, status: 'rejected' })
+          .eq('id', payload.itemId));
+        break;
       case 'addDepartment':
         ({ error } = await supabase.from('departments').insert({
           name: sanitizeText(payload.name),

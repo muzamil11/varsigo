@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: '/', label: 'Home' },
   { href: '/teachers', label: 'Teachers' },
   { href: '/papers', label: 'Papers' },
+  { href: '/lost-found', label: 'Lost & Found' },
   { href: '/faq', label: 'FAQ' },
   { href: '/questions', label: 'Q&A' },
 ];

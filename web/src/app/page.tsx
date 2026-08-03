@@ -16,6 +16,7 @@ import Link from 'next/link';
 import React from 'react';
 
 import { Screen } from '@/components';
+import { FAQS } from '@/features/faq/data';
 
 export const revalidate = 300;
 
@@ -37,6 +38,12 @@ const FEATURES = [
     icon: FileText,
     title: 'Past Papers & Notes',
     description: 'Sign in to browse approved papers, download files, and upload your own.',
+  },
+  {
+    href: '/lost-found',
+    icon: Search,
+    title: 'Lost & Found',
+    description: 'Report lost or found items with admin approval and signed-in contact access.',
   },
   {
     href: '/faq',
@@ -77,12 +84,7 @@ const TRUST_POINTS = [
   'NED-focused data',
 ];
 
-const QUICK_FAQS = [
-  'How do I upload a paper?',
-  'Why are reviews checked first?',
-  'Why do papers require sign-in?',
-  'How do I suggest a missing teacher?',
-];
+const QUICK_FAQS = FAQS.slice(0, 4);
 
 export default function HomePage() {
   return (
@@ -147,7 +149,7 @@ export default function HomePage() {
               </h2>
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {FEATURES.map((feature) => (
               <Link
                 key={feature.href}
@@ -240,13 +242,13 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {QUICK_FAQS.map((question) => (
+            {QUICK_FAQS.map((faq) => (
               <Link
-                key={question}
-                href="/faq"
+                key={faq.id}
+                href={`/faq?category=${encodeURIComponent(faq.category)}`}
                 className="flex items-center justify-between rounded-xl border border-line bg-background px-4 py-3 text-sm font-medium text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
               >
-                {question}
+                {faq.question}
                 <Sparkles size={16} className="text-accent" />
               </Link>
             ))}

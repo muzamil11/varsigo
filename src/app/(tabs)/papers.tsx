@@ -47,6 +47,7 @@ export default function PapersScreen() {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [previewPaper, setPreviewPaper] = useState<Paper | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [departmentPickerOpen, setDepartmentPickerOpen] = useState(false);
   const hasLoaded = useRef(false);
 
   const load = useCallback(async (isRefresh = false) => {
@@ -179,22 +180,19 @@ export default function PapersScreen() {
         </View>
       </View>
 
-      <View className="mt-3">
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16 }}
-          keyboardShouldPersistTaps="handled"
+      <View className="mt-3 px-4">
+        <Pressable
+          onPress={() => setDepartmentPickerOpen(true)}
+          className="flex-row items-center justify-between rounded-2xl border border-line bg-card px-4 py-3 dark:border-line-dark dark:bg-card-dark"
         >
-          {[ALL_DEPARTMENTS, ...departments].map((department) => (
-            <Chip
-              key={department.id}
-              label={department.name}
-              selected={selectedDept.id === department.id}
-              onPress={() => setSelectedDept(department)}
-            />
-          ))}
-        </ScrollView>
+          <View>
+            <Text className="text-xs text-muted dark:text-muted-dark">Department</Text>
+            <Text className="mt-1 text-sm font-semibold text-foreground dark:text-foreground-dark">
+              {selectedDept.name}
+            </Text>
+          </View>
+          <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
+        </Pressable>
       </View>
 
       <View className="mt-2">
@@ -325,6 +323,54 @@ export default function PapersScreen() {
             <Button label="Save or Share Page" onPress={handleSharePreview} />
           </View>
         </SafeAreaView>
+      </Modal>
+
+      <Modal
+        visible={departmentPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDepartmentPickerOpen(false)}
+      >
+        <Pressable
+          className="flex-1 justify-end bg-black/50"
+          onPress={() => setDepartmentPickerOpen(false)}
+        >
+          <Pressable className="max-h-[70%] rounded-t-3xl bg-card p-4 dark:bg-card-dark">
+            <View className="mb-3 flex-row items-center justify-between">
+              <Text className="text-lg font-bold text-foreground dark:text-foreground-dark">
+                Select department
+              </Text>
+              <Pressable
+                onPress={() => setDepartmentPickerOpen(false)}
+                hitSlop={8}
+                className="h-9 w-9 items-center justify-center rounded-full border border-line dark:border-line-dark"
+              >
+                <Ionicons name="close" size={18} color={colors.text} />
+              </Pressable>
+            </View>
+            <FlatList
+              data={[ALL_DEPARTMENTS, ...departments]}
+              keyExtractor={(department) => department.id}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => {
+                    setSelectedDept(item);
+                    setDepartmentPickerOpen(false);
+                  }}
+                  className="flex-row items-center justify-between rounded-xl px-3 py-3"
+                >
+                  <Text className="text-base text-foreground dark:text-foreground-dark">
+                    {item.name}
+                  </Text>
+                  {selectedDept.id === item.id && (
+                    <Ionicons name="checkmark" size={18} color={colors.accent} />
+                  )}
+                </Pressable>
+              )}
+            />
+          </Pressable>
+        </Pressable>
       </Modal>
     </Screen>
   );

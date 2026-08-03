@@ -12,6 +12,7 @@ const SECTIONS = [
   { href: '/admin', label: 'Overview' },
   { href: '/admin/reviews', label: 'Reviews' },
   { href: '/admin/uploads', label: 'Uploads' },
+  { href: '/admin/lost-found', label: 'Lost & Found' },
   { href: '/admin/teachers', label: 'Departments' },
   { href: '/admin/teachers/courses', label: 'Courses' },
   { href: '/admin/teachers/list', label: 'Teachers' },

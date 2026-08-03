@@ -63,6 +63,25 @@ interface UploadFileRequest {
   size?: number;
 }
 
+type LostFoundKind = 'lost' | 'found';
+
+function validateLostFoundKind(kind: unknown): LostFoundKind {
+  if (kind !== 'lost' && kind !== 'found') throw new Error('Choose lost or found.');
+  return kind;
+}
+
+function optionalUrl(input: unknown): string | null {
+  const value = sanitizeText(input);
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error();
+    return url.toString();
+  } catch {
+    throw new Error('Photo link must be a valid URL.');
+  }
+}
+
 async function getVerifiedIdentity(authHeader: string | null): Promise<VerifiedIdentity> {
   const token = authHeader?.replace(/^Bearer\s+/i, '');
   if (!token) throw new Error('Missing Firebase token.');
@@ -320,6 +339,58 @@ Deno.serve(async (req) => {
         file_url: fileUrl,
         file_urls: fileUrls,
         approved: false,
+      });
+      if (error) throw error;
+
+      return Response.json({ data: null }, { headers: corsHeaders });
+    }
+
+    if (action === 'listLostFoundItems') {
+      const { data, error } = await supabase
+        .from('lost_found_items')
+        .select(
+          'id, kind, item_name, description, university, campus, location, contact_name, whatsapp, email, photo_url, created_at',
+        )
+        .eq('status', 'approved')
+        .eq('approved', true)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+
+      return Response.json({ data: data ?? [] }, { headers: corsHeaders });
+    }
+
+    if (action === 'submitLostFoundItem') {
+      const kind = validateLostFoundKind(payload.kind);
+      const itemName = sanitizeText(payload.itemName);
+      const description = sanitizeText(payload.description);
+      const university = sanitizeText(payload.university) || 'NED University';
+      const campus = sanitizeText(payload.campus) || null;
+      const location = sanitizeText(payload.location);
+      const contactName = sanitizeText(payload.contactName);
+      const whatsapp = sanitizeText(payload.whatsapp) || null;
+      const email = sanitizeText(payload.email || identity.email);
+      const photoUrl = optionalUrl(payload.photoUrl);
+
+      if (itemName.length < 2) throw new Error('Item name is too short.');
+      if (description.length < 10) throw new Error('Description is too short.');
+      if (location.length < 3) throw new Error('Location is required.');
+      if (contactName.length < 2) throw new Error('Contact name is required.');
+      if (!email.includes('@')) throw new Error('Enter a valid email address.');
+
+      const { error } = await supabase.from('lost_found_items').insert({
+        user_id: userId,
+        kind,
+        item_name: itemName,
+        description,
+        university,
+        campus,
+        location,
+        contact_name: contactName,
+        whatsapp,
+        email,
+        photo_url: photoUrl,
+        approved: false,
+        status: 'pending',
       });
       if (error) throw error;
 
