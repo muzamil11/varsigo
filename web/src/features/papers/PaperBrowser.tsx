@@ -40,10 +40,12 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
   const uploadHref = '/papers/upload';
   const isFiltered = Boolean(search.trim() || departmentId || kind !== 'All');
   const visibleError = clientError ?? error;
-  const showInitialLoading =
-    hasHydrated && isAuthenticated && refreshState !== 'settled' && papers.length === 0;
-  const refreshingPapers =
-    hasHydrated && isAuthenticated && refreshState === 'loading' && papers.length > 0;
+  // The papers array always starts from the server-rendered `initialPapers`
+  // (never undefined), so there's always something real to show — including
+  // an accurate empty state. Never swap that out for a loading placeholder
+  // during the background refetch below, or the empty state flickers
+  // (empty -> "Loading approved papers" -> empty) right after hydration.
+  const refreshingPapers = hasHydrated && isAuthenticated && refreshState === 'loading';
 
   useEffect(() => {
     if (!hasHydrated || !isAuthenticated) return;
@@ -197,15 +199,7 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
             </div>
 
             <div className="mt-6">
-              {showInitialLoading ? (
-                <div className="rounded-2xl border border-line bg-card p-8 text-center dark:border-line-dark dark:bg-card-dark">
-                  <StateMessage
-                    icon={SearchIcon}
-                    title="Loading approved papers"
-                    subtitle="Checking the latest approved uploads."
-                  />
-                </div>
-              ) : visibleError ? (
+              {visibleError ? (
                 <StateMessage icon={AlertTriangle} title="Couldn't load papers" subtitle={visibleError} />
               ) : filtered.length === 0 ? (
                 <div className="rounded-2xl border border-line bg-card p-8 text-center dark:border-line-dark dark:bg-card-dark">
