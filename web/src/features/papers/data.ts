@@ -40,3 +40,18 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/** Supabase Storage public URLs are cross-origin from the web app, so the
+ *  anchor `download` attribute is ignored by the browser and the file just
+ *  opens in a new tab instead of saving. Appending `?download=<name>` makes
+ *  Supabase itself send `Content-Disposition: attachment`, which works
+ *  regardless of origin. */
+export function buildDownloadUrl(fileUrl: string, filename: string): string {
+  try {
+    const url = new URL(fileUrl);
+    url.searchParams.set('download', filename.replace(/[^\w.-]+/g, '_'));
+    return url.toString();
+  } catch {
+    return fileUrl;
+  }
+}

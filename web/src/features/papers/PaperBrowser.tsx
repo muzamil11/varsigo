@@ -19,7 +19,7 @@ import { AnimatedListItem, Chip, PageShell, SearchBar, StateMessage } from '@/co
 import type { Department } from '@/features/departments/types';
 import { useAuthStore } from '@/store/authStore';
 import { fetchPapers } from './api';
-import { PAPER_KIND_LABELS, getPaperFileType, type Paper } from './data';
+import { PAPER_KIND_LABELS, buildDownloadUrl, getPaperFileType, type Paper } from './data';
 
 interface PaperBrowserProps {
   papers: Paper[];
@@ -288,7 +288,10 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
                                 View
                               </a>
                               <a
-                                href={files[0]}
+                                href={buildDownloadUrl(
+                                  files[0],
+                                  `${paper.title}.${files[0].split('?')[0].split('.').pop() ?? 'pdf'}`,
+                                )}
                                 download
                                 className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent text-sm font-semibold text-white"
                               >
@@ -313,7 +316,12 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
                                     Page {fileIndex + 1}
                                   </a>
                                   <a
-                                    href={url}
+                                    href={buildDownloadUrl(
+                                      url,
+                                      `${paper.title}-page-${fileIndex + 1}.${
+                                        url.split('?')[0].split('.').pop() ?? 'pdf'
+                                      }`,
+                                    )}
                                     download
                                     aria-label={`Download page ${fileIndex + 1}`}
                                     className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-white"
