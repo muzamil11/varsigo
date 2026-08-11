@@ -29,9 +29,11 @@ export function QuestionCard({
           {question.body}
         </Text>
       )}
-      {question.teacherName && (
+      {(question.teacherName || question.paperTitle) && (
         <View className="mt-2 self-start rounded-md bg-accent/10 px-2 py-1">
-          <Text className="text-xs font-medium text-accent">About {question.teacherName}</Text>
+          <Text className="text-xs font-medium text-accent">
+            About {question.teacherName ?? question.paperTitle}
+          </Text>
         </View>
       )}
       <View className="mt-3 flex-row flex-wrap items-center">

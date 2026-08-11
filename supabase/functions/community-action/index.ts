@@ -231,6 +231,7 @@ Deno.serve(async (req) => {
         quality_flags: quality.flags,
         moderation_priority: quality.priority,
         teacher_id: payload.teacherId ?? null,
+        paper_id: payload.paperId ?? null,
       });
       if (error) throw error;
 

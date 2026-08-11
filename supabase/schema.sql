@@ -301,6 +301,16 @@ alter table questions add constraint questions_teacher_id_fkey
   foreign key (teacher_id) references teachers(id) on delete set null;
 create index if not exists idx_questions_teacher_id on questions(teacher_id);
 
+-- Same idea, but for a past paper/notes upload — papers have no comment
+-- section, so "ask a question about this paper" is how students discuss one
+-- (see the paper card's question-count chip and src/app/papers/[id]/questions.tsx
+-- / web's (gated)/papers/[id]/questions).
+alter table questions add column if not exists paper_id uuid;
+alter table questions drop constraint if exists questions_paper_id_fkey;
+alter table questions add constraint questions_paper_id_fkey
+  foreign key (paper_id) references uploads(id) on delete set null;
+create index if not exists idx_questions_paper_id on questions(paper_id);
+
 -- ─────────────────────────────────────────────────────────────────────────
 -- Row Level Security
 --

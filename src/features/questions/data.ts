@@ -12,6 +12,8 @@ export interface QuestionListItem {
   createdAt: string;
   teacherId: string | null;
   teacherName: string | null;
+  paperId: string | null;
+  paperTitle: string | null;
 }
 
 export interface AnswerItem {

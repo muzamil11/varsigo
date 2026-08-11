@@ -26,16 +26,21 @@ export default function QuestionsPage() {
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [askTeacherId, setAskTeacherId] = useState<string | null>(null);
   const [askTeacherName, setAskTeacherName] = useState<string | null>(null);
+  const [askPaperId, setAskPaperId] = useState<string | null>(null);
+  const [askPaperName, setAskPaperName] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
 
-  // Arriving from a teacher's review page's "Ask a question" link — open
-  // straight into the form with that teacher pre-linked.
+  // Arriving from a teacher's review page or a paper card's "Ask a
+  // question" link — open straight into the form with that teacher/paper
+  // pre-linked.
   useEffect(() => {
     if (searchParams.get('openAsk') !== '1') return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional, reading a one-time nav param
     setShowForm(true);
     setAskTeacherId(searchParams.get('askTeacherId'));
     setAskTeacherName(searchParams.get('askTeacherName'));
+    setAskPaperId(searchParams.get('askPaperId'));
+    setAskPaperName(searchParams.get('askPaperName'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -69,12 +74,15 @@ export default function QuestionsPage() {
         departmentId: departmentId || null,
         isAnonymous,
         teacherId: askTeacherId,
+        paperId: askPaperId,
       });
       setTitle('');
       setBody('');
       setShowForm(false);
       setAskTeacherId(null);
       setAskTeacherName(null);
+      setAskPaperId(null);
+      setAskPaperName(null);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not post question.');
@@ -115,14 +123,18 @@ export default function QuestionsPage() {
 
         {showForm && (
           <div className="mb-6 rounded-2xl border border-line bg-card p-4 dark:border-line-dark dark:bg-card-dark">
-            {askTeacherName && (
+            {(askTeacherName || askPaperName) && (
               <div className="mb-3 flex items-center justify-between rounded-lg bg-accent/10 px-3 py-2">
-                <span className="text-sm font-medium text-accent">About: {askTeacherName}</span>
+                <span className="text-sm font-medium text-accent">
+                  About: {askTeacherName ?? askPaperName}
+                </span>
                 <button
                   type="button"
                   onClick={() => {
                     setAskTeacherId(null);
                     setAskTeacherName(null);
+                    setAskPaperId(null);
+                    setAskPaperName(null);
                   }}
                   className="text-accent"
                 >
@@ -198,9 +210,9 @@ export default function QuestionsPage() {
                 {q.body && (
                   <p className="mt-1 line-clamp-2 text-sm text-muted dark:text-muted-dark">{q.body}</p>
                 )}
-                {q.teacherName && (
+                {(q.teacherName || q.paperTitle) && (
                   <span className="mt-1.5 inline-flex rounded-md bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
-                    About {q.teacherName}
+                    About {q.teacherName ?? q.paperTitle}
                   </span>
                 )}
                 <p className="mt-2 text-xs text-muted dark:text-muted-dark">

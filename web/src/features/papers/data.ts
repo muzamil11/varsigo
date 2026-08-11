@@ -15,6 +15,7 @@ export interface Paper {
   fileUrls: string[];
   uploaderName: string;
   createdAt: string;
+  questionCount: number;
 }
 
 export const PAPER_KIND_LABELS: Record<PaperKind, string> = {

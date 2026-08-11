@@ -37,6 +37,8 @@ export default function HelpScreen() {
   const params = useLocalSearchParams<{
     askTeacherId?: string;
     askTeacherName?: string;
+    askPaperId?: string;
+    askPaperName?: string;
     openAsk?: string;
   }>();
   const [segment, setSegment] = useState<Segment>('questions');
@@ -56,21 +58,26 @@ export default function HelpScreen() {
   const [askAnonymous, setAskAnonymous] = useState(true);
   const [askTeacherId, setAskTeacherId] = useState<string | null>(null);
   const [askTeacherName, setAskTeacherName] = useState<string | null>(null);
+  const [askPaperId, setAskPaperId] = useState<string | null>(null);
+  const [askPaperName, setAskPaperName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const consumedAskParams = useRef(false);
 
-  // Arriving from a teacher's review page's "Ask a Question" button —
-  // open straight into the ask form with that teacher pre-linked. Guarded
-  // by a ref so it only fires once per navigation, not every time this
-  // (persistently mounted) tab screen regains focus.
+  // Arriving from a teacher's review page or a paper card's "Ask a
+  // Question" button — open straight into the ask form with that
+  // teacher/paper pre-linked. Guarded by a ref so it only fires once per
+  // navigation, not every time this (persistently mounted) tab screen
+  // regains focus.
   useEffect(() => {
     if (params.openAsk !== '1' || consumedAskParams.current) return;
     consumedAskParams.current = true;
     setSegment('questions');
     setAskTeacherId(params.askTeacherId ?? null);
     setAskTeacherName(params.askTeacherName ?? null);
+    setAskPaperId(params.askPaperId ?? null);
+    setAskPaperName(params.askPaperName ?? null);
     setAskVisible(true);
-  }, [params.openAsk, params.askTeacherId, params.askTeacherName]);
+  }, [params.openAsk, params.askTeacherId, params.askTeacherName, params.askPaperId, params.askPaperName]);
 
   const loadQuestions = useCallback(async (isRefresh = false) => {
     const shouldShowSkeleton = !isRefresh && !hasLoadedQuestions.current;
@@ -128,6 +135,8 @@ export default function HelpScreen() {
     setAskAnonymous(true);
     setAskTeacherId(null);
     setAskTeacherName(null);
+    setAskPaperId(null);
+    setAskPaperName(null);
   };
 
   const handleSubmitQuestion = async () => {
@@ -150,6 +159,7 @@ export default function HelpScreen() {
         departmentId: askDepartmentId,
         isAnonymous: askAnonymous,
         teacherId: askTeacherId,
+        paperId: askPaperId,
       });
       closeAsk();
       await loadQuestions(true);
@@ -250,12 +260,20 @@ export default function HelpScreen() {
             <Text className="mb-4 text-lg font-semibold text-foreground dark:text-foreground-dark">
               Ask a Question
             </Text>
-            {askTeacherName && (
+            {(askTeacherName || askPaperName) && (
               <View className="mb-3 flex-row items-center justify-between rounded-xl bg-accent/10 px-3 py-2">
                 <Text className="flex-1 text-sm font-medium text-accent">
-                  About: {askTeacherName}
+                  About: {askTeacherName ?? askPaperName}
                 </Text>
-                <Pressable onPress={() => { setAskTeacherId(null); setAskTeacherName(null); }} hitSlop={8}>
+                <Pressable
+                  onPress={() => {
+                    setAskTeacherId(null);
+                    setAskTeacherName(null);
+                    setAskPaperId(null);
+                    setAskPaperName(null);
+                  }}
+                  hitSlop={8}
+                >
                   <Ionicons name="close" size={16} color={colors.accent} />
                 </Pressable>
               </View>

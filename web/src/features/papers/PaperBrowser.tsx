@@ -9,6 +9,7 @@ import {
   FileText,
   Image as ImageIcon,
   LogIn,
+  MessageCircle,
   Search as SearchIcon,
   UploadCloud,
 } from 'lucide-react';
@@ -268,6 +269,15 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
                                 Uploaded by {paper.uploaderName} on {paper.createdAt}
                               </span>
                             </div>
+                            <Link
+                              href={`/papers/${paper.id}/questions?title=${encodeURIComponent(paper.title)}`}
+                              className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-2 py-1 text-xs font-medium text-accent"
+                            >
+                              <MessageCircle size={12} />
+                              {paper.questionCount > 0
+                                ? `${paper.questionCount} question${paper.questionCount === 1 ? '' : 's'}`
+                                : 'Ask a question'}
+                            </Link>
                           </div>
 
                           {files.length <= 1 ? (

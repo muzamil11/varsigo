@@ -6,7 +6,7 @@ import { analyzeReviewQuality } from '@/features/teachers/quality';
 import type { AnswerItem, QuestionDetail, QuestionListItem } from './data';
 
 const QUESTION_COLUMNS =
-  'id, title, body, is_anonymous, upvote_count, answer_count, accepted_answer_id, created_at, teacher_id, departments(name), users(name, email), teachers(name)';
+  'id, title, body, is_anonymous, upvote_count, answer_count, accepted_answer_id, created_at, teacher_id, paper_id, departments(name), users(name, email), teachers(name), uploads(title)';
 const ANSWER_COLUMNS = 'id, body, is_anonymous, upvote_count, created_at, users(name, email)';
 
 interface RawQuestionRow {
@@ -19,9 +19,11 @@ interface RawQuestionRow {
   accepted_answer_id: string | null;
   created_at: string;
   teacher_id: string | null;
+  paper_id: string | null;
   departments: { name: string } | null;
   users: { name: string | null; email: string | null } | null;
   teachers: { name: string } | null;
+  uploads: { title: string } | null;
 }
 
 interface RawAnswerRow {
@@ -68,16 +70,30 @@ function mapQuestion(row: RawQuestionRow): QuestionListItem {
     createdAt: formatDate(row.created_at),
     teacherId: row.teacher_id,
     teacherName: row.teachers?.name ?? null,
+    paperId: row.paper_id,
+    paperTitle: row.uploads?.title ?? null,
   };
 }
 
-export async function fetchQuestions(userId?: string): Promise<QuestionListItem[]> {
+export interface QuestionFilters {
+  teacherId?: string;
+  paperId?: string;
+}
+
+export async function fetchQuestions(
+  userId?: string,
+  filters: QuestionFilters = {},
+): Promise<QuestionListItem[]> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('questions')
       .select(QUESTION_COLUMNS)
       .eq('status', 'active')
       .order('created_at', { ascending: false });
+    if (filters.teacherId) query = query.eq('teacher_id', filters.teacherId);
+    if (filters.paperId) query = query.eq('paper_id', filters.paperId);
+
+    const { data, error } = await query;
     if (error) throw error;
     const questions = ((data ?? []) as unknown as RawQuestionRow[]).map(mapQuestion);
     if (!userId || questions.length === 0) return questions;
@@ -182,6 +198,7 @@ export async function submitQuestion(input: {
   departmentId: string | null;
   isAnonymous: boolean;
   teacherId?: string | null;
+  paperId?: string | null;
 }): Promise<void> {
   if (isCommunityFunctionConfigured()) {
     return callCommunityFunction<void>('submitQuestion', {
@@ -190,6 +207,7 @@ export async function submitQuestion(input: {
       departmentId: input.departmentId,
       isAnonymous: input.isAnonymous,
       teacherId: input.teacherId ?? null,
+      paperId: input.paperId ?? null,
     });
   }
 
@@ -206,6 +224,7 @@ export async function submitQuestion(input: {
       quality_flags: quality.flags,
       moderation_priority: quality.priority,
       teacher_id: input.teacherId ?? null,
+      paper_id: input.paperId ?? null,
     });
     if (error) throw error;
   } catch (error) {

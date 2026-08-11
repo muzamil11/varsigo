@@ -99,9 +99,9 @@ export default function QuestionDetailPage() {
               {question.body && (
                 <p className="mt-2 text-sm text-foreground dark:text-foreground-dark">{question.body}</p>
               )}
-              {question.teacherName && (
+              {(question.teacherName || question.paperTitle) && (
                 <span className="mt-2 inline-flex rounded-md bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
-                  About {question.teacherName}
+                  About {question.teacherName ?? question.paperTitle}
                 </span>
               )}
               <div className="mt-3 flex items-center justify-between text-xs text-muted dark:text-muted-dark">

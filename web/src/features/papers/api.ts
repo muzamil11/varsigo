@@ -54,7 +54,10 @@ export async function fetchPapers(filters: PaperFilters = {}): Promise<Paper[]> 
     const { data, error } = await query;
     if (error) throw error;
 
-    return ((data ?? []) as unknown as RawUploadRow[]).map((u) => ({
+    const rows = (data ?? []) as unknown as RawUploadRow[];
+    const questionCounts = await fetchQuestionCountsByPaper(rows.map((u) => u.id));
+
+    return rows.map((u) => ({
       id: u.id,
       title: u.title,
       subject: u.subject,
@@ -65,10 +68,32 @@ export async function fetchPapers(filters: PaperFilters = {}): Promise<Paper[]> 
       fileUrls: u.file_urls?.length ? u.file_urls : [u.file_url],
       uploaderName: isAdminEmail(u.users?.email) ? 'Admin' : (u.users?.name ?? 'Anonymous'),
       createdAt: formatDate(u.created_at),
+      questionCount: questionCounts.get(u.id) ?? 0,
     }));
   } catch (error) {
     throw new Error(toFriendlyError(error));
   }
+}
+
+/** Papers have no comment section — "ask a question about this paper" (see
+ *  the paper card's question-count chip) is how students discuss one, so the
+ *  list needs a per-paper count of the questions already linked to it. */
+async function fetchQuestionCountsByPaper(paperIds: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (paperIds.length === 0) return counts;
+
+  const { data, error } = await supabase
+    .from('questions')
+    .select('paper_id')
+    .eq('status', 'active')
+    .in('paper_id', paperIds);
+  if (error) return counts;
+
+  for (const row of (data ?? []) as { paper_id: string | null }[]) {
+    if (!row.paper_id) continue;
+    counts.set(row.paper_id, (counts.get(row.paper_id) ?? 0) + 1);
+  }
+  return counts;
 }
 
 export interface UploadPaperInput {

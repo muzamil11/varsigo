@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { Card } from '@/components';
 import { useThemeColors } from '@/store/themeStore';
@@ -9,11 +9,13 @@ import { formatFileSize, getPaperFileType, PAPER_KIND_LABELS, type Paper } from 
 export function PaperCard({
   paper,
   onPress,
+  onAskPress,
   downloading = false,
   downloadProgress = 0,
 }: {
   paper: Paper;
   onPress: () => void;
+  onAskPress?: () => void;
   downloading?: boolean;
   downloadProgress?: number;
 }) {
@@ -38,44 +40,60 @@ export function PaperCard({
   }, [paper.fileUrl]);
 
   return (
-    <Card onPress={onPress} className="mb-3 flex-row items-center">
-      <View className="h-11 w-11 items-center justify-center rounded-xl bg-accent/15">
-        <Ionicons
-          name={fileType === 'image' ? 'image-outline' : 'document-text-outline'}
-          size={20}
-          color="#6366F1"
-        />
+    <Card onPress={onPress} className="mb-3">
+      <View className="flex-row items-center">
+        <View className="h-11 w-11 items-center justify-center rounded-xl bg-accent/15">
+          <Ionicons
+            name={fileType === 'image' ? 'image-outline' : 'document-text-outline'}
+            size={20}
+            color="#6366F1"
+          />
+        </View>
+        <View className="ml-3 flex-1">
+          <Text
+            numberOfLines={1}
+            className="text-base font-semibold text-foreground dark:text-foreground-dark"
+          >
+            {paper.title}
+          </Text>
+          <Text className="mt-0.5 text-xs text-muted dark:text-muted-dark">
+            {[
+              paper.department,
+              paper.year,
+              PAPER_KIND_LABELS[paper.kind],
+              fileType === 'image' && pageCount > 1 ? `${pageCount} pages` : null,
+              fileSize,
+            ]
+              .filter(Boolean)
+              .join(' - ')}
+          </Text>
+          <Text className="mt-0.5 text-xs text-muted dark:text-muted-dark">
+            Uploaded by {paper.uploaderName}
+          </Text>
+        </View>
+        {downloading ? (
+          <Text className="text-xs font-medium text-accent">{Math.round(downloadProgress * 100)}%</Text>
+        ) : (
+          <Ionicons
+            name={fileType === 'image' ? 'eye-outline' : 'download-outline'}
+            size={20}
+            color={colors.textMuted}
+          />
+        )}
       </View>
-      <View className="ml-3 flex-1">
-        <Text
-          numberOfLines={1}
-          className="text-base font-semibold text-foreground dark:text-foreground-dark"
+      {onAskPress && (
+        <Pressable
+          onPress={onAskPress}
+          hitSlop={6}
+          className="mt-2 flex-row items-center gap-1 self-start rounded-md bg-accent/10 px-2 py-1"
         >
-          {paper.title}
-        </Text>
-        <Text className="mt-0.5 text-xs text-muted dark:text-muted-dark">
-          {[
-            paper.department,
-            paper.year,
-            PAPER_KIND_LABELS[paper.kind],
-            fileType === 'image' && pageCount > 1 ? `${pageCount} pages` : null,
-            fileSize,
-          ]
-            .filter(Boolean)
-            .join(' - ')}
-        </Text>
-        <Text className="mt-0.5 text-xs text-muted dark:text-muted-dark">
-          Uploaded by {paper.uploaderName}
-        </Text>
-      </View>
-      {downloading ? (
-        <Text className="text-xs font-medium text-accent">{Math.round(downloadProgress * 100)}%</Text>
-      ) : (
-        <Ionicons
-          name={fileType === 'image' ? 'eye-outline' : 'download-outline'}
-          size={20}
-          color={colors.textMuted}
-        />
+          <Ionicons name="chatbubbles-outline" size={12} color={colors.accent} />
+          <Text className="text-xs font-medium text-accent">
+            {paper.questionCount > 0
+              ? `${paper.questionCount} question${paper.questionCount === 1 ? '' : 's'}`
+              : 'Ask a question'}
+          </Text>
+        </Pressable>
       )}
     </Card>
   );

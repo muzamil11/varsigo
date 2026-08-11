@@ -249,6 +249,12 @@ export default function PapersScreen() {
               <PaperCard
                 paper={item}
                 onPress={() => openPaper(item)}
+                onAskPress={() =>
+                  router.push({
+                    pathname: '/papers/[id]/questions',
+                    params: { id: item.id, title: item.title },
+                  })
+                }
                 downloading={downloadingId === item.id}
                 downloadProgress={downloadingId === item.id ? downloadProgress : 0}
               />
