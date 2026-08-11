@@ -232,7 +232,8 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
               ) : (
                 <div className="grid gap-4">
                   {filtered.map((paper, index) => {
-                    const fileType = getPaperFileType(paper.fileUrl);
+                    const files = paper.fileUrls.length > 0 ? paper.fileUrls : [paper.fileUrl];
+                    const fileType = getPaperFileType(files[0]);
                     return (
                       <AnimatedListItem key={paper.id} index={index}>
                         <article className="grid gap-4 rounded-2xl border border-line bg-card p-4 dark:border-line-dark dark:bg-card-dark lg:grid-cols-[140px_minmax(0,1fr)_220px] lg:items-center">
@@ -275,25 +276,54 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
-                            <a
-                              href={paper.fileUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-line text-sm font-semibold text-foreground dark:border-line-dark dark:text-foreground-dark"
-                            >
-                              <ExternalLink size={15} />
-                              View
-                            </a>
-                            <a
-                              href={paper.fileUrl}
-                              download
-                              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent text-sm font-semibold text-white"
-                            >
-                              <Download size={15} />
-                              Download
-                            </a>
-                          </div>
+                          {files.length <= 1 ? (
+                            <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+                              <a
+                                href={files[0]}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-line text-sm font-semibold text-foreground dark:border-line-dark dark:text-foreground-dark"
+                              >
+                                <ExternalLink size={15} />
+                                View
+                              </a>
+                              <a
+                                href={files[0]}
+                                download
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent text-sm font-semibold text-white"
+                              >
+                                <Download size={15} />
+                                Download
+                              </a>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1.5">
+                              <p className="text-xs font-semibold text-muted dark:text-muted-dark">
+                                {files.length} pages
+                              </p>
+                              {files.map((url, fileIndex) => (
+                                <div key={url} className="flex items-center gap-1.5">
+                                  <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-line text-xs font-semibold text-foreground dark:border-line-dark dark:text-foreground-dark"
+                                  >
+                                    <ExternalLink size={13} />
+                                    Page {fileIndex + 1}
+                                  </a>
+                                  <a
+                                    href={url}
+                                    download
+                                    aria-label={`Download page ${fileIndex + 1}`}
+                                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-white"
+                                  >
+                                    <Download size={13} />
+                                  </a>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </article>
                       </AnimatedListItem>
                     );
