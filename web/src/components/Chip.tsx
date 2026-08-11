@@ -14,14 +14,14 @@ export function Chip({ label, selected = false, onPress }: ChipProps) {
       onClick={onPress}
       className={
         selected
-          ? 'mr-2 shrink-0 rounded-full bg-accent px-4 py-1.5'
-          : 'mr-2 shrink-0 rounded-full border border-line bg-card px-4 py-1.5 dark:border-line-dark dark:bg-card-dark'
+          ? 'mb-2 mr-2 max-w-full shrink-0 rounded-full bg-accent px-4 py-1.5'
+          : 'mb-2 mr-2 max-w-full shrink-0 rounded-full border border-line bg-card px-4 py-1.5 dark:border-line-dark dark:bg-card-dark'
       }
     >
       <span
-        className={
+        className={`block max-w-[70vw] truncate ${
           selected ? 'text-sm font-medium text-white' : 'text-sm text-muted dark:text-muted-dark'
-        }
+        }`}
       >
         {label}
       </span>

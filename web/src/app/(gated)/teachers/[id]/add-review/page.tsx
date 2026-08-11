@@ -122,7 +122,7 @@ export default function AddReviewPage() {
             <p className="mb-3 text-xs text-muted dark:text-muted-dark">
               Optional. Pick the course this review is about.
             </p>
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex flex-wrap">
               <Chip label="General" selected={courseId === null} onPress={() => setCourseId(null)} />
               {teacher.courses.map((course) => (
                 <Chip
