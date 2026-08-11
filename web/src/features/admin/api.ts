@@ -167,6 +167,34 @@ export async function fetchPendingUploads(adminEmail: string): Promise<AdminUplo
   }
 }
 
+/** Already-published papers (approved: true) — lets the admin remove a live
+ *  paper later (e.g. wrong file, reported as inappropriate, duplicate),
+ *  separate from the moderation queue in fetchPendingUploads above. */
+export async function fetchApprovedUploads(adminEmail: string): Promise<AdminUpload[]> {
+  assertAdmin(adminEmail);
+  try {
+    const { data, error } = await supabase
+      .from('uploads')
+      .select('id, title, subject, year, type, file_url, created_at, departments(name)')
+      .eq('approved', true)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    return ((data ?? []) as unknown as RawPendingUploadRow[]).map((u) => ({
+      id: u.id,
+      title: u.title,
+      subject: u.subject,
+      department: u.departments?.name ?? null,
+      year: u.year,
+      kind: u.type,
+      fileUrl: u.file_url,
+      createdAt: formatDate(u.created_at),
+    }));
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
 export async function approveUpload(adminEmail: string, uploadId: string): Promise<void> {
   assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {
@@ -180,6 +208,9 @@ export async function approveUpload(adminEmail: string, uploadId: string): Promi
   }
 }
 
+/** Deletes an upload row outright — used both to reject a pending upload
+ *  and to remove an already-published one (see fetchApprovedUploads above);
+ *  it has no `approved` filter, so it works on either. */
 export async function rejectUpload(adminEmail: string, uploadId: string): Promise<void> {
   assertAdmin(adminEmail);
   if (isAdminFunctionConfigured()) {

@@ -19,9 +19,20 @@ create table if not exists users (
 
 -- Migrated from Firebase phone-OTP identity (phone) to Google Sign-In
 -- (firebase_uid + email). No production users existed at migration time, so
--- existing rows are cleared rather than backfilled — safe to re-run.
-delete from users;
-alter table users drop column if exists phone;
+-- existing rows were cleared rather than backfilled. Guarded on the old
+-- `phone` column still being present so this only ever fires once — without
+-- this guard, re-running the file (which the header above invites) would
+-- silently wipe every real account created since the migration.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'users' and column_name = 'phone'
+  ) then
+    delete from users;
+    alter table users drop column phone;
+  end if;
+end $$;
 alter table users add column if not exists firebase_uid text;
 alter table users add column if not exists email text;
 alter table users alter column firebase_uid set not null;
