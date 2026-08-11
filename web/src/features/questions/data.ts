@@ -10,6 +10,8 @@ export interface QuestionListItem {
   answerCount: number;
   acceptedAnswerId: string | null;
   createdAt: string;
+  teacherId: string | null;
+  teacherName: string | null;
 }
 
 export interface AnswerItem {

@@ -1,3 +1,4 @@
+import { isAdminEmail } from '@/lib/admin';
 import { sanitizeText } from '@/lib/sanitize';
 import { callCommunityFunction, isCommunityFunctionConfigured } from '@/lib/communityFunction';
 import {
@@ -33,7 +34,7 @@ interface RawReviewDetailRow {
   comment: string | null;
   is_anonymous: boolean;
   created_at: string;
-  users: { name: string | null } | null;
+  users: { name: string | null; email: string | null } | null;
   courses: { id: string; code: string | null; name: string } | null;
 }
 
@@ -114,7 +115,7 @@ async function fetchApprovedReviewRows(teacherId: string): Promise<RawReviewDeta
   const { data, error } = await supabase
     .from('reviews')
     .select(
-      'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, users(name), courses(id, code, name)',
+      'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, users(name, email), courses(id, code, name)',
     )
     .eq('teacher_id', teacherId)
     .eq('approved', true)
@@ -125,7 +126,7 @@ async function fetchApprovedReviewRows(teacherId: string): Promise<RawReviewDeta
   const { data: fallbackData, error: fallbackError } = await supabase
     .from('reviews')
     .select(
-      'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, users(name)',
+      'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, users(name, email)',
     )
     .eq('teacher_id', teacherId)
     .eq('approved', true)
@@ -246,7 +247,11 @@ export async function fetchTeacherById(id: string): Promise<TeacherDetail> {
     const rawReviews = await fetchApprovedReviewRows(id);
     const reviews: TeacherReview[] = rawReviews.map((r) => ({
       id: r.id,
-      author: r.is_anonymous ? 'Anonymous Student' : r.users?.name || 'Anonymous Student',
+      author: r.is_anonymous
+        ? 'Anonymous Student'
+        : isAdminEmail(r.users?.email)
+          ? 'Admin'
+          : r.users?.name || 'Anonymous Student',
       course: r.courses,
       comment: r.comment,
       teaching: r.teaching_score,

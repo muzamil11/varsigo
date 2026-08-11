@@ -188,7 +188,7 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
               </div>
 
               <div className="mt-4 flex flex-wrap">
-                <Chip label="All types" selected={kind === 'All'} onPress={() => setKind('All')} />
+                <Chip label="All" selected={kind === 'All'} onPress={() => setKind('All')} />
                 <Chip
                   label="Past Papers"
                   selected={kind === 'past_paper'}

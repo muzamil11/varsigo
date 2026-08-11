@@ -1,8 +1,13 @@
+import { isAdminEmail } from '@/lib/admin';
 import { sanitizeText } from '@/lib/sanitize';
 import { supabase, toFriendlyError } from '@/lib/supabase';
 import { callCommunityFunction, isCommunityFunctionConfigured } from '@/lib/communityFunction';
 import { analyzeReviewQuality } from '@/features/teachers/quality';
 import type { AnswerItem, QuestionDetail, QuestionListItem } from './data';
+
+const QUESTION_COLUMNS =
+  'id, title, body, is_anonymous, upvote_count, answer_count, accepted_answer_id, created_at, teacher_id, departments(name), users(name, email), teachers(name)';
+const ANSWER_COLUMNS = 'id, body, is_anonymous, upvote_count, created_at, users(name, email)';
 
 interface RawQuestionRow {
   id: string;
@@ -13,8 +18,10 @@ interface RawQuestionRow {
   answer_count: number | null;
   accepted_answer_id: string | null;
   created_at: string;
+  teacher_id: string | null;
   departments: { name: string } | null;
-  users: { name: string | null } | null;
+  users: { name: string | null; email: string | null } | null;
+  teachers: { name: string } | null;
 }
 
 interface RawAnswerRow {
@@ -23,7 +30,7 @@ interface RawAnswerRow {
   is_anonymous: boolean;
   upvote_count: number | null;
   created_at: string;
-  users: { name: string | null } | null;
+  users: { name: string | null; email: string | null } | null;
 }
 
 function formatDate(iso: string): string {
@@ -35,11 +42,15 @@ function formatDate(iso: string): string {
 }
 
 function questionAuthor(row: Pick<RawQuestionRow, 'is_anonymous' | 'users'>): string {
-  return row.is_anonymous ? 'Anonymous Student' : row.users?.name || 'Student';
+  if (row.is_anonymous) return 'Anonymous Student';
+  if (isAdminEmail(row.users?.email)) return 'Admin';
+  return row.users?.name || 'Student';
 }
 
 function answerAuthor(row: Pick<RawAnswerRow, 'is_anonymous' | 'users'>): string {
-  return row.is_anonymous ? 'Anonymous Student' : row.users?.name || 'Student';
+  if (row.is_anonymous) return 'Anonymous Student';
+  if (isAdminEmail(row.users?.email)) return 'Admin';
+  return row.users?.name || 'Student';
 }
 
 function mapQuestion(row: RawQuestionRow): QuestionListItem {
@@ -55,6 +66,8 @@ function mapQuestion(row: RawQuestionRow): QuestionListItem {
     answerCount: row.answer_count ?? 0,
     acceptedAnswerId: row.accepted_answer_id,
     createdAt: formatDate(row.created_at),
+    teacherId: row.teacher_id,
+    teacherName: row.teachers?.name ?? null,
   };
 }
 
@@ -62,9 +75,7 @@ export async function fetchQuestions(userId?: string): Promise<QuestionListItem[
   try {
     const { data, error } = await supabase
       .from('questions')
-      .select(
-        'id, title, body, is_anonymous, upvote_count, answer_count, accepted_answer_id, created_at, departments(name), users(name)',
-      )
+      .select(QUESTION_COLUMNS)
       .eq('status', 'active')
       .order('created_at', { ascending: false });
     if (error) throw error;
@@ -95,9 +106,7 @@ export async function fetchQuestionById(id: string, userId?: string): Promise<Qu
   try {
     const { data: questionData, error: questionError } = await supabase
       .from('questions')
-      .select(
-        'id, title, body, is_anonymous, upvote_count, answer_count, accepted_answer_id, created_at, departments(name), users(name)',
-      )
+      .select(QUESTION_COLUMNS)
       .eq('id', id)
       .eq('status', 'active')
       .single();
@@ -105,7 +114,7 @@ export async function fetchQuestionById(id: string, userId?: string): Promise<Qu
 
     const { data: answerData, error: answerError } = await supabase
       .from('answers')
-      .select('id, body, is_anonymous, upvote_count, created_at, users(name)')
+      .select(ANSWER_COLUMNS)
       .eq('question_id', id)
       .eq('status', 'active')
       .order('upvote_count', { ascending: false })
@@ -172,6 +181,7 @@ export async function submitQuestion(input: {
   body: string;
   departmentId: string | null;
   isAnonymous: boolean;
+  teacherId?: string | null;
 }): Promise<void> {
   if (isCommunityFunctionConfigured()) {
     return callCommunityFunction<void>('submitQuestion', {
@@ -179,6 +189,7 @@ export async function submitQuestion(input: {
       body: input.body,
       departmentId: input.departmentId,
       isAnonymous: input.isAnonymous,
+      teacherId: input.teacherId ?? null,
     });
   }
 
@@ -194,6 +205,7 @@ export async function submitQuestion(input: {
       is_anonymous: input.isAnonymous,
       quality_flags: quality.flags,
       moderation_priority: quality.priority,
+      teacher_id: input.teacherId ?? null,
     });
     if (error) throw error;
   } catch (error) {

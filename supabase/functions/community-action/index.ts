@@ -230,6 +230,7 @@ Deno.serve(async (req) => {
         is_anonymous: Boolean(payload.isAnonymous),
         quality_flags: quality.flags,
         moderation_priority: quality.priority,
+        teacher_id: payload.teacherId ?? null,
       });
       if (error) throw error;
 

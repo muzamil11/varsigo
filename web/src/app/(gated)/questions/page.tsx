@@ -1,7 +1,8 @@
 'use client';
 
-import { ArrowBigUp, MessageCircle, Plus } from 'lucide-react';
+import { ArrowBigUp, MessageCircle, Plus, X } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 
 import { Button, CardSkeletonList, Screen, StateMessage } from '@/components';
@@ -13,6 +14,7 @@ import { useAuthStore } from '@/store/authStore';
 
 export default function QuestionsPage() {
   const user = useAuthStore((s) => s.user);
+  const searchParams = useSearchParams();
   const [questions, setQuestions] = useState<QuestionListItem[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +24,20 @@ export default function QuestionsPage() {
   const [body, setBody] = useState('');
   const [departmentId, setDepartmentId] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
+  const [askTeacherId, setAskTeacherId] = useState<string | null>(null);
+  const [askTeacherName, setAskTeacherName] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+
+  // Arriving from a teacher's review page's "Ask a question" link — open
+  // straight into the form with that teacher pre-linked.
+  useEffect(() => {
+    if (searchParams.get('openAsk') !== '1') return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional, reading a one-time nav param
+    setShowForm(true);
+    setAskTeacherId(searchParams.get('askTeacherId'));
+    setAskTeacherName(searchParams.get('askTeacherName'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const load = () => {
     if (!user) return;
@@ -53,10 +68,13 @@ export default function QuestionsPage() {
         body,
         departmentId: departmentId || null,
         isAnonymous,
+        teacherId: askTeacherId,
       });
       setTitle('');
       setBody('');
       setShowForm(false);
+      setAskTeacherId(null);
+      setAskTeacherName(null);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not post question.');
@@ -97,6 +115,21 @@ export default function QuestionsPage() {
 
         {showForm && (
           <div className="mb-6 rounded-2xl border border-line bg-card p-4 dark:border-line-dark dark:bg-card-dark">
+            {askTeacherName && (
+              <div className="mb-3 flex items-center justify-between rounded-lg bg-accent/10 px-3 py-2">
+                <span className="text-sm font-medium text-accent">About: {askTeacherName}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAskTeacherId(null);
+                    setAskTeacherName(null);
+                  }}
+                  className="text-accent"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -164,6 +197,11 @@ export default function QuestionsPage() {
                 <p className="font-semibold text-foreground dark:text-foreground-dark">{q.title}</p>
                 {q.body && (
                   <p className="mt-1 line-clamp-2 text-sm text-muted dark:text-muted-dark">{q.body}</p>
+                )}
+                {q.teacherName && (
+                  <span className="mt-1.5 inline-flex rounded-md bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                    About {q.teacherName}
+                  </span>
                 )}
                 <p className="mt-2 text-xs text-muted dark:text-muted-dark">
                   {q.author} · {q.department ?? 'General'} · {q.answerCount} answer

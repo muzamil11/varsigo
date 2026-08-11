@@ -122,9 +122,16 @@ export function ReviewsSection({ teacherId }: { teacherId: string }) {
             {detail.reviewCount} review{detail.reviewCount === 1 ? '' : 's'}
           </p>
         </div>
-        <Link href={`/teachers/${teacherId}/add-review`}>
-          <Button label="Write a review" />
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href={`/questions?askTeacherId=${teacherId}&askTeacherName=${encodeURIComponent(detail.name)}&openAsk=1`}
+          >
+            <Button label="Ask a question" variant="ghost" />
+          </Link>
+          <Link href={`/teachers/${teacherId}/add-review`}>
+            <Button label="Write a review" />
+          </Link>
+        </div>
       </div>
 
       {detail.breakdown && (

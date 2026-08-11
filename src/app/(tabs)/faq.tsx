@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -34,6 +34,11 @@ const MIN_QUESTION_TITLE = 12;
 export default function HelpScreen() {
   const router = useRouter();
   const colors = useThemeColors();
+  const params = useLocalSearchParams<{
+    askTeacherId?: string;
+    askTeacherName?: string;
+    openAsk?: string;
+  }>();
   const [segment, setSegment] = useState<Segment>('questions');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<'All' | FaqCategory>('All');
@@ -49,7 +54,23 @@ export default function HelpScreen() {
   const [askBody, setAskBody] = useState('');
   const [askDepartmentId, setAskDepartmentId] = useState<string | null>(null);
   const [askAnonymous, setAskAnonymous] = useState(true);
+  const [askTeacherId, setAskTeacherId] = useState<string | null>(null);
+  const [askTeacherName, setAskTeacherName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const consumedAskParams = useRef(false);
+
+  // Arriving from a teacher's review page's "Ask a Question" button —
+  // open straight into the ask form with that teacher pre-linked. Guarded
+  // by a ref so it only fires once per navigation, not every time this
+  // (persistently mounted) tab screen regains focus.
+  useEffect(() => {
+    if (params.openAsk !== '1' || consumedAskParams.current) return;
+    consumedAskParams.current = true;
+    setSegment('questions');
+    setAskTeacherId(params.askTeacherId ?? null);
+    setAskTeacherName(params.askTeacherName ?? null);
+    setAskVisible(true);
+  }, [params.openAsk, params.askTeacherId, params.askTeacherName]);
 
   const loadQuestions = useCallback(async (isRefresh = false) => {
     const shouldShowSkeleton = !isRefresh && !hasLoadedQuestions.current;
@@ -105,6 +126,8 @@ export default function HelpScreen() {
     setAskBody('');
     setAskDepartmentId(null);
     setAskAnonymous(true);
+    setAskTeacherId(null);
+    setAskTeacherName(null);
   };
 
   const handleSubmitQuestion = async () => {
@@ -126,6 +149,7 @@ export default function HelpScreen() {
         body: askBody.trim(),
         departmentId: askDepartmentId,
         isAnonymous: askAnonymous,
+        teacherId: askTeacherId,
       });
       closeAsk();
       await loadQuestions(true);
@@ -226,6 +250,16 @@ export default function HelpScreen() {
             <Text className="mb-4 text-lg font-semibold text-foreground dark:text-foreground-dark">
               Ask a Question
             </Text>
+            {askTeacherName && (
+              <View className="mb-3 flex-row items-center justify-between rounded-xl bg-accent/10 px-3 py-2">
+                <Text className="flex-1 text-sm font-medium text-accent">
+                  About: {askTeacherName}
+                </Text>
+                <Pressable onPress={() => { setAskTeacherId(null); setAskTeacherName(null); }} hitSlop={8}>
+                  <Ionicons name="close" size={16} color={colors.accent} />
+                </Pressable>
+              </View>
+            )}
             <TextInput
               value={askTitle}
               onChangeText={setAskTitle}

@@ -291,6 +291,16 @@ alter table questions drop constraint if exists questions_department_id_fkey;
 alter table questions add constraint questions_department_id_fkey
   foreign key (department_id) references departments(id) on delete set null;
 
+-- Lets a teacher's review page link straight into a new Q&A thread about
+-- that teacher (see src/app/teachers/[id]/index.tsx and the web
+-- ReviewsSection's "Ask a question" entry point) instead of stuffing more
+-- discussion into reviews.
+alter table questions add column if not exists teacher_id uuid;
+alter table questions drop constraint if exists questions_teacher_id_fkey;
+alter table questions add constraint questions_teacher_id_fkey
+  foreign key (teacher_id) references teachers(id) on delete set null;
+create index if not exists idx_questions_teacher_id on questions(teacher_id);
+
 -- ─────────────────────────────────────────────────────────────────────────
 -- Row Level Security
 --

@@ -160,16 +160,29 @@ export default function TeacherDetailScreen() {
           </Card>
         )}
 
-        <Button
-          label="Write a Review"
-          onPress={() =>
-            router.push({
-              pathname: '/teachers/[id]/add-review',
-              params: { id: teacher.id, name: teacher.name },
-            })
-          }
-          className="mt-4"
-        />
+        <View className="mt-4 flex-row gap-3">
+          <Button
+            label="Write a Review"
+            onPress={() =>
+              router.push({
+                pathname: '/teachers/[id]/add-review',
+                params: { id: teacher.id, name: teacher.name },
+              })
+            }
+            className="flex-1"
+          />
+          <Button
+            label="Ask a Question"
+            variant="ghost"
+            onPress={() =>
+              router.push({
+                pathname: '/(tabs)/faq',
+                params: { askTeacherId: teacher.id, askTeacherName: teacher.name, openAsk: '1' },
+              })
+            }
+            className="flex-1"
+          />
+        </View>
 
         <Text className="mb-3 mt-6 text-base font-semibold text-foreground dark:text-foreground-dark">
           Reviews

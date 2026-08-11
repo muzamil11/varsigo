@@ -1,6 +1,7 @@
 import { decode as decodeBase64 } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
 
+import { isAdminEmail } from '@/lib/admin';
 import { callCommunityFunction, isCommunityFunctionConfigured } from '@/lib/communityFunction';
 import { sanitizeText } from '@/lib/sanitize';
 import { PAPERS_BUCKET, supabase, toFriendlyError } from '@/lib/supabase';
@@ -16,7 +17,7 @@ interface RawUploadRow {
   file_urls: string[] | null;
   created_at: string;
   departments: { name: string } | null;
-  users: { name: string | null } | null;
+  users: { name: string | null; email: string | null } | null;
 }
 
 interface SignedUploadSlot {
@@ -43,7 +44,9 @@ export async function fetchPapers(filters: PaperFilters = {}): Promise<Paper[]> 
   try {
     let query = supabase
       .from('uploads')
-      .select('id, title, subject, year, type, file_url, file_urls, created_at, departments(name), users(name)')
+      .select(
+        'id, title, subject, year, type, file_url, file_urls, created_at, departments(name), users(name, email)',
+      )
       .eq('approved', true)
       .order('created_at', { ascending: false });
 
@@ -63,7 +66,7 @@ export async function fetchPapers(filters: PaperFilters = {}): Promise<Paper[]> 
       kind: u.type,
       fileUrl: u.file_url,
       fileUrls: u.file_urls?.length ? u.file_urls : [u.file_url],
-      uploaderName: u.users?.name ?? 'Anonymous',
+      uploaderName: isAdminEmail(u.users?.email) ? 'Admin' : (u.users?.name ?? 'Anonymous'),
       createdAt: formatDate(u.created_at),
     }));
   } catch (error) {
