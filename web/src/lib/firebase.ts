@@ -43,6 +43,13 @@ export const firebaseAuth = getAuth(firebaseApp);
 // in addition to, not instead of, the app's own Zustand `authStore` (see
 // src/store/authStore.ts), which remains the source of truth for routing
 // since it also carries the Supabase user row.
-if (typeof window !== 'undefined') {
-  void setPersistence(firebaseAuth, browserLocalPersistence);
-}
+//
+// Exported so google.ts can await it before calling signInWithRedirect() /
+// getRedirectResult() — those race with this promise otherwise: on mobile,
+// hitting "Continue with Google" (or landing back from Google) before this
+// resolves makes getRedirectResult() silently return null, bouncing the user
+// back to the login screen with no error and no signed-in state.
+export const firebaseAuthReady: Promise<void> =
+  typeof window !== 'undefined'
+    ? setPersistence(firebaseAuth, browserLocalPersistence).catch(() => {})
+    : Promise.resolve();

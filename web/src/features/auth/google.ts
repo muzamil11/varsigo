@@ -9,7 +9,7 @@ import {
   type User as FirebaseUser,
 } from 'firebase/auth';
 
-import { firebaseAuth } from '@/lib/firebase';
+import { firebaseAuth, firebaseAuthReady } from '@/lib/firebase';
 
 function friendlyGoogleError(error: unknown): string {
   console.error('[google-signin]', error);
@@ -38,6 +38,7 @@ function shouldUseRedirect(): boolean {
  *  where completeGoogleRedirectSignIn() picks up the result. */
 export async function signInWithGoogle(): Promise<FirebaseUser | null> {
   try {
+    await firebaseAuthReady;
     const provider = new GoogleAuthProvider();
     if (shouldUseRedirect()) {
       await signInWithRedirect(firebaseAuth, provider);
@@ -55,6 +56,7 @@ export async function signInWithGoogle(): Promise<FirebaseUser | null> {
  *  Resolves to null on a normal (non-redirect) page load. */
 export async function completeGoogleRedirectSignIn(): Promise<FirebaseUser | null> {
   try {
+    await firebaseAuthReady;
     const result = await getRedirectResult(firebaseAuth);
     return result?.user ?? null;
   } catch (error) {
