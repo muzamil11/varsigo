@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { AnimatedListItem, Button, Card, Screen, StateMessage } from '@/components';
@@ -8,6 +8,7 @@ import { formatCourse } from '@/features/courses/types';
 import { fetchTeacherById, reportReview } from '@/features/teachers/api';
 import type { TeacherDetail } from '@/features/teachers/data';
 import { RatingBar } from '@/features/teachers/RatingBar';
+import { useAuthStore } from '@/store/authStore';
 import { useThemeColors } from '@/store/themeStore';
 
 function verificationLabel(status: TeacherDetail['verificationStatus']): string {
@@ -25,28 +26,37 @@ export default function TeacherDetailScreen() {
   const router = useRouter();
   const colors = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const userId = useAuthStore((s) => s.user?.id);
 
   const [teacher, setTeacher] = useState<TeacherDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
+  const hasLoaded = useRef(false);
 
   const load = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
+    if (!hasLoaded.current) setLoading(true);
     setError(null);
     try {
-      setTeacher(await fetchTeacherById(id));
+      setTeacher(await fetchTeacherById(id, userId));
+      hasLoaded.current = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, userId]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Re-fetches every time this screen regains focus — in particular, right
+  // after coming back from add-review, so a just-submitted review's
+  // "pending approval" card (below) appears immediately instead of only on
+  // the next full remount.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   const handleReport = (reviewId: string) => {
     Alert.alert('Report this review?', 'Let moderators know this review is inappropriate.', [
@@ -187,9 +197,38 @@ export default function TeacherDetailScreen() {
         <Text className="mb-3 mt-6 text-base font-semibold text-foreground dark:text-foreground-dark">
           Reviews
         </Text>
+        {teacher.myPendingReviews.map((review) => (
+          <Card key={review.id} className="mb-3 border border-amber-500/40 bg-amber-500/5">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center self-start rounded-md bg-amber-500/15 px-2 py-0.5">
+                <Ionicons name="time-outline" size={12} color="#D97706" />
+                <Text className="ml-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                  Pending approval
+                </Text>
+              </View>
+              <Text className="text-xs text-muted dark:text-muted-dark">{review.createdAt}</Text>
+            </View>
+            <View className="mt-2 flex-row items-center">
+              <Ionicons name="star" size={13} color="#6366F1" />
+              <Text className="ml-1 text-sm font-medium text-accent">
+                {((review.teaching + review.grading + review.attendance) / 3).toFixed(1)}
+              </Text>
+            </View>
+            {review.comment && (
+              <Text className="mt-2 text-sm leading-5 text-muted dark:text-muted-dark">
+                {review.comment}
+              </Text>
+            )}
+            <Text className="mt-2 text-xs text-muted dark:text-muted-dark">
+              Only visible to you until a moderator approves it.
+            </Text>
+          </Card>
+        ))}
         {teacher.reviews.length === 0 ? (
           <Text className="text-sm text-muted dark:text-muted-dark">
-            No reviews yet — be the first to write one.
+            {teacher.myPendingReviews.length > 0
+              ? 'No approved reviews yet.'
+              : 'No reviews yet — be the first to write one.'}
           </Text>
         ) : (
           teacher.reviews.map((review, index) => {

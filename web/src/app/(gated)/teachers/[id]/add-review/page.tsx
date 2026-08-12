@@ -1,6 +1,6 @@
 'use client';
 
-import { Star } from 'lucide-react';
+import { Clock, Star } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 
@@ -60,6 +60,7 @@ export default function AddReviewPage() {
   const [comment, setComment] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -91,14 +92,40 @@ export default function AddReviewPage() {
         comment: trimmedComment,
         isAnonymous,
       });
-      // Keep the spinner through the navigation instead of resetting it
-      // first — see login/page.tsx's comment for why.
-      router.push(`/teachers/${teacherId}`);
+      setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not submit review.');
       setSubmitting(false);
     }
   };
+
+  // There's no toast system on web yet (see ReviewsSection's handleReport),
+  // so this confirmation screen is the only signal the reviewer gets that
+  // their submission actually landed and is awaiting moderation — a plain
+  // silent redirect back to the teacher page here would leave them unsure
+  // whether the submit even worked.
+  if (submitted) {
+    return (
+      <Screen>
+        <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-4 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/10">
+            <Clock className="text-accent" size={28} />
+          </div>
+          <h1 className="mt-4 text-xl font-bold text-foreground dark:text-foreground-dark">
+            Review submitted
+          </h1>
+          <p className="mt-2 text-sm text-muted dark:text-muted-dark">
+            Thanks! Your review is pending moderation and will appear once approved.
+          </p>
+          <Button
+            label="Back to teacher"
+            onPress={() => router.push(`/teachers/${teacherId}`)}
+            className="mt-6"
+          />
+        </div>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Flag, LogIn, MessageSquareOff, Star } from 'lucide-react';
+import { Clock, Flag, LogIn, MessageSquareOff, Star } from 'lucide-react';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 
@@ -27,6 +27,7 @@ function RatingBar({ label, value }: { label: string; value: number }) {
 export function ReviewsSection({ teacherId }: { teacherId: string }) {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  const userId = useAuthStore((s) => s.user?.id);
   const [detail, setDetail] = useState<TeacherDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +41,7 @@ export function ReviewsSection({ teacherId }: { teacherId: string }) {
     }
     let cancelled = false;
     setLoading(true);
-    fetchTeacherById(teacherId)
+    fetchTeacherById(teacherId, userId)
       .then((data) => {
         if (!cancelled) setDetail(data);
       })
@@ -53,7 +54,7 @@ export function ReviewsSection({ teacherId }: { teacherId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [teacherId, hasHydrated, isAuthenticated]);
+  }, [teacherId, hasHydrated, isAuthenticated, userId]);
 
   const handleReport = async (reviewId: string) => {
     try {
@@ -142,11 +143,41 @@ export function ReviewsSection({ teacherId }: { teacherId: string }) {
         </div>
       )}
 
+      {detail.myPendingReviews.map((review) => (
+        <div
+          key={review.id}
+          className="mb-3 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4"
+        >
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+              <Clock size={12} />
+              Pending approval
+            </span>
+            <span className="text-xs text-muted dark:text-muted-dark">{review.createdAt}</span>
+          </div>
+          {review.comment && (
+            <p className="mt-2 text-sm text-foreground dark:text-foreground-dark">{review.comment}</p>
+          )}
+          <div className="mt-3 flex gap-4 text-xs text-muted dark:text-muted-dark">
+            <span>Teaching {review.teaching}/5</span>
+            <span>Grading {review.grading}/5</span>
+            <span>Attendance {review.attendance}/5</span>
+          </div>
+          <p className="mt-3 text-xs text-muted dark:text-muted-dark">
+            Only visible to you until a moderator approves it.
+          </p>
+        </div>
+      ))}
+
       {detail.reviews.length === 0 ? (
         <StateMessage
           icon={Star}
-          title="No reviews yet"
-          subtitle="Be the first to review this teacher."
+          title={detail.myPendingReviews.length > 0 ? 'No approved reviews yet' : 'No reviews yet'}
+          subtitle={
+            detail.myPendingReviews.length > 0
+              ? undefined
+              : 'Be the first to review this teacher.'
+          }
         />
       ) : (
         detail.reviews.map((review) => (

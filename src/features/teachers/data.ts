@@ -26,6 +26,9 @@ export interface TeacherReview {
 export interface TeacherDetail extends TeacherListItem {
   breakdown: { teaching: number; grading: number; attendance: number } | null;
   reviews: TeacherReview[];
+  /** This viewer's own reviews for this teacher that are still awaiting
+   *  moderator approval — empty when logged out or once approved. */
+  myPendingReviews: TeacherReview[];
 }
 
 /** A single approved review surfaced outside its teacher's own page — e.g.

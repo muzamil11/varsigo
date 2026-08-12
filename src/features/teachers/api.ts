@@ -119,31 +119,61 @@ async function fetchCourseMapForTeachers(
   return coursesByTeacher;
 }
 
-async function fetchApprovedReviewRows(teacherId: string): Promise<RawReviewDetailRow[]> {
-  const { data, error } = await supabase
+async function fetchReviewRows(
+  teacherId: string,
+  filters: { approved: boolean; userId?: string },
+): Promise<RawReviewDetailRow[]> {
+  let query = supabase
     .from('reviews')
     .select(
       'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, users(name, email), courses(id, code, name)',
     )
     .eq('teacher_id', teacherId)
-    .eq('approved', true)
+    .eq('approved', filters.approved)
     .order('created_at', { ascending: false });
+  if (filters.userId) query = query.eq('user_id', filters.userId);
+
+  const { data, error } = await query;
   if (!error) return (data ?? []) as unknown as RawReviewDetailRow[];
   if (!isMissingSchemaError(error)) throw error;
 
-  const { data: fallbackData, error: fallbackError } = await supabase
+  let fallbackQuery = supabase
     .from('reviews')
     .select(
       'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, users(name, email)',
     )
     .eq('teacher_id', teacherId)
-    .eq('approved', true)
+    .eq('approved', filters.approved)
     .order('created_at', { ascending: false });
+  if (filters.userId) fallbackQuery = fallbackQuery.eq('user_id', filters.userId);
+
+  const { data: fallbackData, error: fallbackError } = await fallbackQuery;
   if (fallbackError) throw fallbackError;
   return ((fallbackData ?? []) as unknown as Omit<RawReviewDetailRow, 'courses'>[]).map((review) => ({
     ...review,
     courses: null,
   }));
+}
+
+function toTeacherReview(r: RawReviewDetailRow): TeacherReview {
+  return {
+    id: r.id,
+    author: r.is_anonymous
+      ? 'Anonymous Student'
+      : isAdminEmail(r.users?.email)
+        ? 'Admin'
+        : r.users?.name || 'Anonymous Student',
+    course: r.courses,
+    comment: r.comment,
+    teaching: r.teaching_score,
+    grading: r.grading_score,
+    attendance: r.attendance_score,
+    createdAt: new Date(r.created_at).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }),
+  };
 }
 
 export async function fetchTeachers(departmentId?: string, courseId?: string): Promise<TeacherListItem[]> {
@@ -208,7 +238,11 @@ export async function fetchTeachers(departmentId?: string, courseId?: string): P
   }
 }
 
-export async function fetchTeacherById(id: string): Promise<TeacherDetail> {
+/** `currentUserId`, when passed, also fetches this user's own not-yet-approved
+ *  reviews for this teacher (`myPendingReviews`) — surfaced by the teacher
+ *  detail screen so a reviewer can see their submission is awaiting
+ *  moderation instead of it just silently disappearing from the list. */
+export async function fetchTeacherById(id: string, currentUserId?: string): Promise<TeacherDetail> {
   try {
     const { data: teacherRow, error: teacherError } = await supabase
       .from('teachers')
@@ -220,25 +254,12 @@ export async function fetchTeacherById(id: string): Promise<TeacherDetail> {
     const teacher = teacherRow as unknown as RawTeacherRow;
     const coursesByTeacher = await fetchCourseMapForTeachers([id]);
 
-    const rawReviews = await fetchApprovedReviewRows(id);
-    const reviews: TeacherReview[] = rawReviews.map((r) => ({
-      id: r.id,
-      author: r.is_anonymous
-        ? 'Anonymous Student'
-        : isAdminEmail(r.users?.email)
-          ? 'Admin'
-          : r.users?.name || 'Anonymous Student',
-      course: r.courses,
-      comment: r.comment,
-      teaching: r.teaching_score,
-      grading: r.grading_score,
-      attendance: r.attendance_score,
-      createdAt: new Date(r.created_at).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      }),
-    }));
+    const [rawReviews, rawMyPending] = await Promise.all([
+      fetchReviewRows(id, { approved: true }),
+      currentUserId ? fetchReviewRows(id, { approved: false, userId: currentUserId }) : Promise.resolve([]),
+    ]);
+    const reviews = rawReviews.map(toTeacherReview);
+    const myPendingReviews = rawMyPending.map(toTeacherReview);
 
     return {
       id: teacher.id,
@@ -256,6 +277,7 @@ export async function fetchTeacherById(id: string): Promise<TeacherDetail> {
           }
         : null,
       reviews,
+      myPendingReviews,
     };
   } catch (error) {
     throw new Error(toFriendlyError(error));
