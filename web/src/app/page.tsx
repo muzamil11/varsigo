@@ -4,7 +4,6 @@ import {
   FileText,
   GraduationCap,
   HelpCircle,
-  Image as ImageIcon,
   MessageCircle,
   Quote,
   Search,
@@ -252,30 +251,42 @@ export default async function HomePage() {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {recentPapers.map((paper) => {
-                const Icon = getPaperFileType(paper.fileUrl) === 'image' ? ImageIcon : FileText;
+                const isImage = getPaperFileType(paper.fileUrl) === 'image';
                 return (
                   <Link
                     key={paper.id}
                     href="/papers"
-                    className="rounded-2xl border border-line bg-card p-5 transition-transform duration-150 hover:-translate-y-0.5 dark:border-line-dark dark:bg-card-dark"
+                    className="overflow-hidden rounded-2xl border border-line bg-card transition-transform duration-150 hover:-translate-y-0.5 dark:border-line-dark dark:bg-card-dark"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10">
-                        <Icon size={17} className="text-accent" />
-                      </div>
-                      <span className="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent">
+                    <div className="relative h-36 w-full overflow-hidden bg-accent/5">
+                      {isImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- previewing an arbitrary uploaded file, not worth Next/Image's static-size config here
+                        <img
+                          src={paper.fileUrl}
+                          alt=""
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-accent/15 to-accent/5">
+                          <FileText size={36} className="text-accent/50" />
+                        </div>
+                      )}
+                      <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
                         {PAPER_KIND_LABELS[paper.kind]}
                       </span>
                     </div>
-                    <p className="mt-3 line-clamp-2 text-sm font-semibold text-foreground dark:text-foreground-dark">
-                      {paper.title}
-                    </p>
-                    <p className="mt-1 text-xs text-muted dark:text-muted-dark">
-                      {[paper.department, paper.year].filter(Boolean).join(' · ')}
-                    </p>
-                    <p className="mt-4 text-xs font-medium text-muted dark:text-muted-dark">
-                      Shared by {paper.uploaderName}
-                    </p>
+                    <div className="p-5">
+                      <p className="line-clamp-2 text-sm font-semibold text-foreground dark:text-foreground-dark">
+                        {paper.title}
+                      </p>
+                      <p className="mt-1 text-xs text-muted dark:text-muted-dark">
+                        {[paper.department, paper.year].filter(Boolean).join(' · ')}
+                      </p>
+                      <p className="mt-4 text-xs font-medium text-muted dark:text-muted-dark">
+                        Shared by {paper.uploaderName}
+                      </p>
+                    </div>
                   </Link>
                 );
               })}
