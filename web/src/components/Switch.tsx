@@ -19,7 +19,7 @@ export function Switch({ checked, onChange, label }: SwitchProps) {
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${
+      className={`relative h-7 w-12 shrink-0 overflow-hidden rounded-full transition-colors duration-200 ${
         checked ? 'bg-accent' : 'bg-line dark:bg-line-dark'
       }`}
     >
