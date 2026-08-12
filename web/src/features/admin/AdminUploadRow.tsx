@@ -3,7 +3,7 @@
 import { Check, ChevronDown, Eye, EyeOff, Pencil, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { Select } from '@/components';
+import { Combobox } from '@/components';
 import { getPaperFileType, PAPER_KIND_LABELS, type PaperKind } from '@/features/papers/data';
 import type { AdminDepartment, AdminUpload } from './data';
 import type { UpdateUploadInput } from './api';
@@ -86,28 +86,25 @@ export function AdminUploadRow({
             className="h-10 w-full rounded-lg border border-line bg-background px-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
           />
           <div className="grid grid-cols-2 gap-2">
-            <Select
+            <Combobox
               value={departmentId}
-              onChange={(e) => setDepartmentId(e.target.value)}
-              chevronSize={14}
-              className="h-10 rounded-lg border border-line bg-background pl-2 text-sm text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
-            >
-              <option value="">General</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </Select>
-            <Select
+              onChange={setDepartmentId}
+              options={[
+                { value: '', label: 'General' },
+                ...departments.map((d) => ({ value: d.id, label: d.name })),
+              ]}
+              className="h-10 rounded-lg border border-line bg-background px-2 text-sm text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+            />
+            <Combobox
               value={kind}
-              onChange={(e) => setKind(e.target.value as PaperKind)}
-              chevronSize={14}
-              className="h-10 rounded-lg border border-line bg-background pl-2 text-sm text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
-            >
-              <option value="past_paper">{PAPER_KIND_LABELS.past_paper}</option>
-              <option value="notes">{PAPER_KIND_LABELS.notes}</option>
-            </Select>
+              onChange={(v) => setKind(v as PaperKind)}
+              options={[
+                { value: 'past_paper', label: PAPER_KIND_LABELS.past_paper },
+                { value: 'notes', label: PAPER_KIND_LABELS.notes },
+              ]}
+              searchable={false}
+              className="h-10 rounded-lg border border-line bg-background px-2 text-sm text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+            />
           </div>
           <input
             value={year}

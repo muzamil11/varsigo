@@ -16,7 +16,7 @@ import {
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { Button, Screen, Select } from '@/components';
+import { Button, Combobox, Screen } from '@/components';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
 import { uploadPaper, validateUploadFiles } from '@/features/papers/api';
@@ -228,18 +228,16 @@ export default function UploadPaperPage() {
                       <CalendarDays size={16} className="text-accent" />
                       Year
                     </div>
-                    <Select
+                    <Combobox
                       value={year}
-                      onChange={(e) => setYear(e.target.value)}
+                      onChange={setYear}
+                      options={[
+                        { value: '', label: 'Select year' },
+                        ...YEARS.map((value) => ({ value, label: value })),
+                      ]}
+                      searchable={false}
                       className={fieldClass()}
-                    >
-                      <option value="">Select year</option>
-                      {YEARS.map((value) => (
-                        <option key={value} value={value}>
-                          {value}
-                        </option>
-                      ))}
-                    </Select>
+                    />
                   </div>
                 </div>
               </div>
@@ -252,18 +250,15 @@ export default function UploadPaperPage() {
                     <Building2 size={16} className="text-accent" />
                     Department
                   </div>
-                  <Select
+                  <Combobox
                     value={departmentId}
-                    onChange={(e) => setDepartmentId(e.target.value)}
+                    onChange={setDepartmentId}
+                    options={[
+                      { value: '', label: 'All departments / not sure' },
+                      ...departments.map((d) => ({ value: d.id, label: d.name })),
+                    ]}
                     className={fieldClass()}
-                  >
-                    <option value="">All departments / not sure</option>
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </Select>
+                  />
                 </div>
 
                 <div>

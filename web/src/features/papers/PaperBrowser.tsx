@@ -3,7 +3,6 @@
 import {
   AlertTriangle,
   CalendarDays,
-  ChevronDown,
   Download,
   ExternalLink,
   FileText,
@@ -16,7 +15,7 @@ import {
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { AnimatedListItem, Chip, PageShell, SearchBar, StateMessage } from '@/components';
+import { AnimatedListItem, Chip, Combobox, PageShell, SearchBar, StateMessage } from '@/components';
 import type { Department } from '@/features/departments/types';
 import { useAuthStore } from '@/store/authStore';
 import { fetchPapers } from './api';
@@ -167,25 +166,16 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
                 <label className="sr-only" htmlFor="paper-department">
                   Department
                 </label>
-                <div className="relative">
-                  <select
-                    id="paper-department"
-                    value={departmentId ?? ''}
-                    onChange={(event) => setDepartmentId(event.target.value || null)}
-                    className="h-12 w-full appearance-none rounded-full border border-line bg-card pl-4 pr-10 text-sm text-foreground outline-none focus:border-accent dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
-                  >
-                    <option value="">All departments</option>
-                    {departments.map((department) => (
-                      <option key={department.id} value={department.id}>
-                        {department.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    size={16}
-                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-muted dark:text-muted-dark"
-                  />
-                </div>
+                <Combobox
+                  id="paper-department"
+                  value={departmentId ?? ''}
+                  onChange={(v) => setDepartmentId(v || null)}
+                  options={[
+                    { value: '', label: 'All departments' },
+                    ...departments.map((department) => ({ value: department.id, label: department.name })),
+                  ]}
+                  className="h-12 rounded-full border border-line bg-card px-4 text-sm text-foreground focus:border-accent dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
+                />
               </div>
 
               <div className="mt-4 flex flex-wrap">

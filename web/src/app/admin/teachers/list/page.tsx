@@ -3,7 +3,7 @@
 import { AlertTriangle, Check, Trash2, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
-import { Button, CardSkeletonList, Select, StateMessage } from '@/components';
+import { Button, CardSkeletonList, Combobox, StateMessage } from '@/components';
 import {
   addTeacher,
   approveTeacherSuggestion,
@@ -176,21 +176,18 @@ export default function AdminTeachersListPage() {
           placeholder="Teacher name"
           className="h-11 rounded-lg border border-line bg-card px-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark sm:col-span-2"
         />
-        <Select
+        <Combobox
           value={departmentId}
-          onChange={(e) => {
-            setDepartmentId(e.target.value);
+          onChange={(v) => {
+            setDepartmentId(v);
             setSelectedCourseIds([]);
           }}
-          className="h-11 rounded-lg border border-line bg-card pl-3 text-sm text-foreground dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
-        >
-          <option value="">Department</option>
-          {departments.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </Select>
+          options={[
+            { value: '', label: 'Department' },
+            ...departments.map((d) => ({ value: d.id, label: d.name })),
+          ]}
+          className="h-11 rounded-lg border border-line bg-card px-3 text-sm text-foreground dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
+        />
       </div>
 
       {departmentId && (
@@ -260,29 +257,26 @@ export default function AdminTeachersListPage() {
               </button>
             </div>
             <div className="mt-2 flex gap-2">
-              <Select
+              <Combobox
                 value={assignCourseId[t.id] ?? ''}
-                onChange={(e) => setAssignCourseId((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                onChange={(v) => setAssignCourseId((prev) => ({ ...prev, [t.id]: v }))}
                 containerClassName="flex-1"
-                chevronSize={14}
-                className="h-9 rounded-lg border border-line bg-background pl-2 text-xs text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
-              >
-                <option value="">
-                  {t.departmentId
-                    ? 'Assign course…'
-                    : 'Set a department first to assign courses'}
-                </option>
-                {/* Filtered to the teacher's own department — an earlier version listed every
-                    course from every department here, making it easy to accidentally assign a
-                    teacher a course outside their own department. */}
-                {courses
-                  .filter((c) => c.departmentId === t.departmentId)
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.code ? `${c.code} — ${c.name}` : c.name}
-                    </option>
-                  ))}
-              </Select>
+                options={[
+                  {
+                    value: '',
+                    label: t.departmentId
+                      ? 'Assign course…'
+                      : 'Set a department first to assign courses',
+                  },
+                  // Filtered to the teacher's own department — an earlier version listed
+                  // every course from every department here, making it easy to
+                  // accidentally assign a teacher a course outside their own department.
+                  ...courses
+                    .filter((c) => c.departmentId === t.departmentId)
+                    .map((c) => ({ value: c.id, label: c.code ? `${c.code} — ${c.name}` : c.name })),
+                ]}
+                className="h-9 rounded-lg border border-line bg-background px-2 text-xs text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+              />
               <button
                 type="button"
                 onClick={() => handleAssign(t.id)}

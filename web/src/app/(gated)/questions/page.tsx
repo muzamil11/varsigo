@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 
-import { Button, CardSkeletonList, Screen, Select, StateMessage, Switch } from '@/components';
+import { Button, CardSkeletonList, Combobox, Screen, StateMessage, Switch } from '@/components';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
 import type { QuestionListItem } from '@/features/questions/data';
@@ -155,18 +155,15 @@ export default function QuestionsPage() {
               placeholder="Add more detail (optional)"
               className="mb-2 w-full rounded-lg border border-line bg-background p-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
             />
-            <Select
+            <Combobox
               value={departmentId}
-              onChange={(e) => setDepartmentId(e.target.value)}
-              className="mb-2 h-11 rounded-lg border border-line bg-background pl-3 text-sm text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
-            >
-              <option value="">No specific department</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </Select>
+              onChange={setDepartmentId}
+              options={[
+                { value: '', label: 'No specific department' },
+                ...departments.map((d) => ({ value: d.id, label: d.name })),
+              ]}
+              className="mb-2 h-11 rounded-lg border border-line bg-background px-3 text-sm text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+            />
             <div className="mb-3 flex items-center justify-between border-t border-line pt-3 dark:border-line-dark">
               <span className="text-sm text-foreground dark:text-foreground-dark">Post anonymously</span>
               <Switch checked={isAnonymous} onChange={setIsAnonymous} label="Post anonymously" />

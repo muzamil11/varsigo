@@ -3,7 +3,7 @@
 import { AlertTriangle, Trash2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
-import { Button, CardSkeletonList, Select, StateMessage } from '@/components';
+import { Button, CardSkeletonList, Combobox, StateMessage } from '@/components';
 import { addCourse, deleteCourse, fetchAdminCourses } from '@/features/admin/api';
 import type { AdminCourse } from '@/features/admin/data';
 import { fetchAdminDepartments } from '@/features/admin/api';
@@ -76,18 +76,15 @@ export default function AdminCoursesPage() {
           placeholder="Code (optional)"
           className="h-11 rounded-lg border border-line bg-card px-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
         />
-        <Select
+        <Combobox
           value={departmentId}
-          onChange={(e) => setDepartmentId(e.target.value)}
-          className="h-11 rounded-lg border border-line bg-card pl-3 text-sm text-foreground dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
-        >
-          <option value="">Department</option>
-          {departments.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </Select>
+          onChange={setDepartmentId}
+          options={[
+            { value: '', label: 'Department' },
+            ...departments.map((d) => ({ value: d.id, label: d.name })),
+          ]}
+          className="h-11 rounded-lg border border-line bg-card px-3 text-sm text-foreground dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
+        />
       </div>
       <Button
         label="Add course"
