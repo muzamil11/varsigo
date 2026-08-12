@@ -24,29 +24,33 @@ function friendlyGoogleError(error: unknown): string {
   return `Something went wrong: ${message}`;
 }
 
-/** Popups render as a tiny, badly-positioned window (or get silently
- *  blocked outright) on mobile browsers — the full-page redirect flow is
- *  what Firebase itself recommends there instead. Matches the Header's own
- *  `md:` breakpoint for "is this a mobile layout". */
-function shouldUseRedirect(): boolean {
-  return typeof window !== 'undefined' && window.innerWidth < 768;
-}
-
-/** Starts sign-in. On desktop this resolves with the signed-in user
- *  directly (popup flow). On mobile it navigates the whole page to Google
- *  and resolves to null — the browser lands back on /login afterwards,
- *  where completeGoogleRedirectSignIn() picks up the result. */
+/** Starts sign-in via popup on every device, including mobile — the
+ *  full-page redirect flow this used to prefer on mobile (screen width
+ *  < 768) depends on Firebase's authDomain (`*.firebaseapp.com`) storing
+ *  cookies/storage during the Google round trip to signal completion back
+ *  on this origin. Mobile Chrome's storage partitioning increasingly breaks
+ *  that handoff silently: the user picks their Google account, lands back
+ *  on /login, and getRedirectResult() just resolves null — no error, no
+ *  sign-in. Popup doesn't have that cross-origin dependency, and modern
+ *  mobile Chrome opens it as a normal tab rather than a broken tiny window.
+ *  Redirect is kept only as a fallback for environments where the popup
+ *  itself can't open (in-app webviews, popup blockers). */
 export async function signInWithGoogle(): Promise<FirebaseUser | null> {
+  await firebaseAuthReady;
+  const provider = new GoogleAuthProvider();
   try {
-    await firebaseAuthReady;
-    const provider = new GoogleAuthProvider();
-    if (shouldUseRedirect()) {
-      await signInWithRedirect(firebaseAuth, provider);
-      return null;
-    }
     const result = await signInWithPopup(firebaseAuth, provider);
     return result.user;
   } catch (error) {
+    const code = (error as { code?: string })?.code;
+    if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
+      try {
+        await signInWithRedirect(firebaseAuth, provider);
+        return null;
+      } catch (redirectError) {
+        throw new Error(friendlyGoogleError(redirectError));
+      }
+    }
     throw new Error(friendlyGoogleError(error));
   }
 }
