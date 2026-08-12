@@ -19,13 +19,13 @@ export function Switch({ checked, onChange, label }: SwitchProps) {
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative h-7 w-12 shrink-0 overflow-hidden rounded-full transition-colors duration-200 ${
+      className={`relative h-7 w-12 shrink-0 overflow-hidden rounded-full border-0 p-0 transition-colors duration-200 ${
         checked ? 'bg-accent' : 'bg-line dark:bg-line-dark'
       }`}
     >
       <span
-        className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-          checked ? 'translate-x-[22px]' : 'translate-x-0.5'
+        className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition-[left] duration-200 ${
+          checked ? 'left-[22px]' : 'left-0.5'
         }`}
       />
     </button>
