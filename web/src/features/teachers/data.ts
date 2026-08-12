@@ -27,3 +27,15 @@ export interface TeacherDetail extends TeacherListItem {
   breakdown: { teaching: number; grading: number; attendance: number } | null;
   reviews: TeacherReview[];
 }
+
+/** A single approved review surfaced outside its teacher's own page — e.g.
+ *  the homepage's "What students are saying" highlight. */
+export interface RecentReview {
+  id: string;
+  author: string;
+  teacherId: string;
+  teacherName: string;
+  comment: string;
+  rating: number;
+  createdAt: string;
+}

@@ -18,8 +18,9 @@ import { signOutGoogle } from '@/features/auth/google';
 import { fetchPapers } from '@/features/papers/api';
 import type { Paper } from '@/features/papers/data';
 import { PaperCard } from '@/features/papers/PaperCard';
-import { fetchTeachers } from '@/features/teachers/api';
-import type { TeacherListItem } from '@/features/teachers/data';
+import { fetchRecentReviews, fetchTeachers } from '@/features/teachers/api';
+import type { RecentReview, TeacherListItem } from '@/features/teachers/data';
+import { ReviewHighlightCard } from '@/features/teachers/ReviewHighlightCard';
 import { TeacherCard } from '@/features/teachers/TeacherCard';
 import { firebaseAuth } from '@/lib/firebase';
 import {
@@ -52,6 +53,10 @@ const QUICK_ACTIONS = [
 
 const RECENT_PAPERS_COUNT = 3;
 const TOP_TEACHERS_COUNT = 3;
+const RECENT_REVIEWS_COUNT = 3;
+// Below this, the section reads as an empty/ghost-town platform rather than
+// a highlight — better to just not show it yet.
+const MIN_REVIEWS_TO_SHOW = 2;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -62,6 +67,7 @@ export default function HomeScreen() {
   const [query, setQuery] = useState('');
   const [allTeachers, setAllTeachers] = useState<TeacherListItem[]>([]);
   const [allPapers, setAllPapers] = useState<Paper[]>([]);
+  const [recentReviews, setRecentReviews] = useState<RecentReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,9 +145,16 @@ export default function HomeScreen() {
         });
         useAuthStore.getState().updateUser(currentUser);
       }
-      const [teachers, papers] = await Promise.all([fetchTeachers(), fetchPapers()]);
+      const [teachers, papers, reviews] = await Promise.all([
+        fetchTeachers(),
+        fetchPapers(),
+        // Best-effort — a highlight reel failing to load shouldn't take the
+        // rest of the Home screen down with it.
+        fetchRecentReviews(RECENT_REVIEWS_COUNT).catch(() => []),
+      ]);
       setAllTeachers(teachers);
       setAllPapers(papers);
+      setRecentReviews(reviews);
       hasLoaded.current = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -301,6 +314,27 @@ export default function HomeScreen() {
                 </Card>
               ))}
             </View>
+
+            {recentReviews.length >= MIN_REVIEWS_TO_SHOW && (
+              <>
+                <Text className="mb-3 mt-6 text-lg font-semibold text-foreground dark:text-foreground-dark">
+                  What students are saying
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingRight: 12 }}
+                >
+                  {recentReviews.map((review) => (
+                    <ReviewHighlightCard
+                      key={review.id}
+                      review={review}
+                      onPress={() => router.push(`/teachers/${review.teacherId}`)}
+                    />
+                  ))}
+                </ScrollView>
+              </>
+            )}
 
             <Text className="mb-3 mt-6 text-lg font-semibold text-foreground dark:text-foreground-dark">
               Top rated teachers

@@ -7,10 +7,18 @@ import {
   isReportReviewFunctionConfigured,
 } from '@/lib/reviewFunction';
 import { supabase, toFriendlyError } from '@/lib/supabase';
-import type { TeacherDetail, TeacherListItem, TeacherReview } from './data';
+import type { RecentReview, TeacherDetail, TeacherListItem, TeacherReview } from './data';
 import { analyzeReviewQuality } from './quality';
 
 const MAX_REVIEWS_PER_DAY = 3;
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 interface RawTeacherRow {
   id: string;
@@ -249,6 +257,55 @@ export async function fetchTeacherById(id: string): Promise<TeacherDetail> {
         : null,
       reviews,
     };
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
+interface RawRecentReviewRow {
+  id: string;
+  teacher_id: string;
+  teaching_score: number;
+  grading_score: number;
+  attendance_score: number;
+  comment: string | null;
+  is_anonymous: boolean;
+  created_at: string;
+  teachers: { name: string } | null;
+  users: { name: string | null; email: string | null } | null;
+}
+
+/** Most recent approved reviews with real comment text, across every
+ *  teacher — used for the Home screen's "What students are saying"
+ *  highlight, not a teacher's own page (see fetchTeacherById above). */
+export async function fetchRecentReviews(limit = 3): Promise<RecentReview[]> {
+  try {
+    const { data, error } = await supabase
+      .from('reviews')
+      .select(
+        'id, teacher_id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, teachers(name), users(name, email)',
+      )
+      .eq('approved', true)
+      .not('comment', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+
+    return ((data ?? []) as unknown as RawRecentReviewRow[])
+      .filter((r) => (r.comment ?? '').trim().length > 0)
+      .map((r) => ({
+        id: r.id,
+        author: r.is_anonymous
+          ? 'Anonymous Student'
+          : isAdminEmail(r.users?.email)
+            ? 'Admin'
+            : r.users?.name || 'Anonymous Student',
+        teacherId: r.teacher_id,
+        teacherName: r.teachers?.name ?? 'A teacher',
+        comment: (r.comment ?? '').trim(),
+        rating: Math.round(((r.teaching_score + r.grading_score + r.attendance_score) / 3) * 10) / 10,
+        createdAt: formatDate(r.created_at),
+      }));
   } catch (error) {
     throw new Error(toFriendlyError(error));
   }
