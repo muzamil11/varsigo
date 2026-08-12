@@ -56,7 +56,7 @@ export default function AddReviewScreen() {
   const [grading, setGrading] = useState(3);
   const [attendance, setAttendance] = useState(3);
   const [comment, setComment] = useState('');
-  const [anonymous, setAnonymous] = useState(true);
+  const [anonymous, setAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const trimmedLength = comment.trim().length;

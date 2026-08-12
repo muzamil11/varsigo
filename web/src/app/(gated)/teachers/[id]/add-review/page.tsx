@@ -58,7 +58,7 @@ export default function AddReviewPage() {
   const [grading, setGrading] = useState(0);
   const [attendance, setAttendance] = useState(0);
   const [comment, setComment] = useState('');
-  const [isAnonymous, setIsAnonymous] = useState(true);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
