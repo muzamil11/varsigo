@@ -62,7 +62,9 @@ export function TeacherCard({
       </View>
       {teacher.rating !== null ? (
         <View className="rounded-lg bg-accent/10 px-2 py-1">
-          <Text className="text-sm font-semibold text-accent">⭐ {teacher.rating.toFixed(1)}</Text>
+          <Text className="text-sm font-semibold text-accent">
+            ⭐ {teacher.rating.toFixed(1)} ({teacher.reviewCount})
+          </Text>
         </View>
       ) : (
         <View className="rounded-lg bg-line px-2 py-1 dark:bg-line-dark">

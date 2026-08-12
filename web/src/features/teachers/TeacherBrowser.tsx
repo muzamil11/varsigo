@@ -14,6 +14,8 @@ export interface PublicTeacherListItem {
   department: string | null;
   courses: { id: string; code: string | null; name: string }[];
   verificationStatus: 'admin_verified' | 'suggestion_approved' | 'unverified';
+  rating: number | null;
+  reviewCount: number;
 }
 
 interface TeacherBrowserProps {
@@ -63,7 +65,7 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
         Teachers
       </h1>
       <p className="mb-6 text-sm text-muted dark:text-muted-dark">
-        Sign in to see ratings and reviews for any teacher.
+        Sign in to read full reviews for any teacher.
       </p>
 
       <div className="max-w-3xl">
@@ -117,6 +119,15 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
                           {teacher.department ?? 'Department not set'}
                         </p>
                       </div>
+                      {teacher.rating !== null ? (
+                        <span className="ml-2 shrink-0 rounded-lg bg-accent/10 px-2 py-1 text-sm font-semibold text-accent">
+                          ⭐ {teacher.rating.toFixed(1)} ({teacher.reviewCount})
+                        </span>
+                      ) : (
+                        <span className="ml-2 shrink-0 rounded-lg bg-line px-2 py-1 text-xs font-medium text-muted dark:bg-line-dark dark:text-muted-dark">
+                          New
+                        </span>
+                      )}
                     </div>
                     {teacher.courses.length > 0 && (
                       <p className="mt-3 line-clamp-2 text-xs text-muted dark:text-muted-dark">

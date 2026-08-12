@@ -27,15 +27,18 @@ export default async function TeachersPage() {
     error = err instanceof Error ? err.message : 'Failed to load teachers.';
   }
 
-  // Public list intentionally omits rating/reviewCount — reviews are
-  // gated behind sign-in, see the (gated) reviews section on the teacher
-  // detail page.
+  // Rating/reviewCount are shown on the list so visitors can judge at a
+  // glance whether a teacher has reviews worth reading — but the review
+  // text itself stays gated behind sign-in, see the (gated) reviews
+  // section on the teacher detail page.
   const publicTeachers = teachers.map((t) => ({
     id: t.id,
     name: t.name,
     department: t.department,
     courses: t.courses,
     verificationStatus: t.verificationStatus,
+    rating: t.rating,
+    reviewCount: t.reviewCount,
   }));
 
   return (
