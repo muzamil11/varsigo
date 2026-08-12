@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 
-import { Button, CardSkeletonList, Screen, StateMessage } from '@/components';
+import { Button, CardSkeletonList, Screen, Select, StateMessage, Switch } from '@/components';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
 import type { QuestionListItem } from '@/features/questions/data';
@@ -155,10 +155,10 @@ export default function QuestionsPage() {
               placeholder="Add more detail (optional)"
               className="mb-2 w-full rounded-lg border border-line bg-background p-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
             />
-            <select
+            <Select
               value={departmentId}
               onChange={(e) => setDepartmentId(e.target.value)}
-              className="mb-2 h-11 w-full rounded-lg border border-line bg-background px-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+              className="mb-2 h-11 rounded-lg border border-line bg-background pl-3 text-sm text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
             >
               <option value="">No specific department</option>
               {departments.map((d) => (
@@ -166,15 +166,11 @@ export default function QuestionsPage() {
                   {d.name}
                 </option>
               ))}
-            </select>
-            <label className="mb-3 flex items-center gap-2 text-sm text-foreground dark:text-foreground-dark">
-              <input
-                type="checkbox"
-                checked={isAnonymous}
-                onChange={(e) => setIsAnonymous(e.target.checked)}
-              />
-              Post anonymously
-            </label>
+            </Select>
+            <div className="mb-3 flex items-center justify-between border-t border-line pt-3 dark:border-line-dark">
+              <span className="text-sm text-foreground dark:text-foreground-dark">Post anonymously</span>
+              <Switch checked={isAnonymous} onChange={setIsAnonymous} label="Post anonymously" />
+            </div>
             <Button label="Post question" onPress={handlePost} loading={posting} disabled={title.trim().length === 0} />
           </div>
         )}

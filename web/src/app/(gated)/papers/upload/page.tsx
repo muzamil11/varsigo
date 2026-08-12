@@ -16,7 +16,7 @@ import {
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { Button, Screen } from '@/components';
+import { Button, Screen, Select } from '@/components';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
 import { uploadPaper, validateUploadFiles } from '@/features/papers/api';
@@ -228,7 +228,7 @@ export default function UploadPaperPage() {
                       <CalendarDays size={16} className="text-accent" />
                       Year
                     </div>
-                    <select
+                    <Select
                       value={year}
                       onChange={(e) => setYear(e.target.value)}
                       className={fieldClass()}
@@ -239,7 +239,7 @@ export default function UploadPaperPage() {
                           {value}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                 </div>
               </div>
@@ -252,7 +252,7 @@ export default function UploadPaperPage() {
                     <Building2 size={16} className="text-accent" />
                     Department
                   </div>
-                  <select
+                  <Select
                     value={departmentId}
                     onChange={(e) => setDepartmentId(e.target.value)}
                     className={fieldClass()}
@@ -263,7 +263,7 @@ export default function UploadPaperPage() {
                         {d.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 <div>

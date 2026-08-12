@@ -4,7 +4,7 @@ import { ArrowBigUp, CheckCircle2, Flag } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 
-import { Button, CardSkeletonList, Screen, StateMessage } from '@/components';
+import { Button, CardSkeletonList, Screen, StateMessage, Switch } from '@/components';
 import type { QuestionDetail } from '@/features/questions/data';
 import {
   fetchQuestionById,
@@ -176,10 +176,10 @@ export default function QuestionDetailPage() {
             rows={3}
             className="mb-2 w-full rounded-lg border border-line bg-background p-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
           />
-          <label className="mb-3 flex items-center gap-2 text-sm text-foreground dark:text-foreground-dark">
-            <input type="checkbox" checked={answerAnon} onChange={(e) => setAnswerAnon(e.target.checked)} />
-            Post anonymously
-          </label>
+          <div className="mb-3 flex items-center justify-between border-t border-line pt-3 dark:border-line-dark">
+            <span className="text-sm text-foreground dark:text-foreground-dark">Post anonymously</span>
+            <Switch checked={answerAnon} onChange={setAnswerAnon} label="Post anonymously" />
+          </div>
           <Button
             label="Post answer"
             onPress={handleAnswer}

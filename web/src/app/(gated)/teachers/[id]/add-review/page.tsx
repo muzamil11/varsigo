@@ -4,7 +4,7 @@ import { Star } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 
-import { Button, Chip, Screen } from '@/components';
+import { Button, Chip, Screen, Switch } from '@/components';
 import { formatCourse } from '@/features/courses/types';
 import { fetchTeacherPublicById, submitReview } from '@/features/teachers/api';
 import type { TeacherDetail } from '@/features/teachers/data';
@@ -152,14 +152,17 @@ export default function AddReviewPage() {
           </p>
         )}
 
-        <label className="mb-6 flex items-center gap-2 text-sm text-foreground dark:text-foreground-dark">
-          <input
-            type="checkbox"
-            checked={isAnonymous}
-            onChange={(e) => setIsAnonymous(e.target.checked)}
-          />
-          Post anonymously
-        </label>
+        <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-line bg-card p-4 dark:border-line-dark dark:bg-card-dark">
+          <div>
+            <p className="text-sm font-medium text-foreground dark:text-foreground-dark">
+              Post anonymously
+            </p>
+            <p className="mt-0.5 text-xs text-muted dark:text-muted-dark">
+              Your name will never be shown with this review.
+            </p>
+          </div>
+          <Switch checked={isAnonymous} onChange={setIsAnonymous} label="Post anonymously" />
+        </div>
 
         {error && (
           <p className="mb-4 rounded-lg border border-line bg-card px-3 py-2 text-sm text-foreground dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark">

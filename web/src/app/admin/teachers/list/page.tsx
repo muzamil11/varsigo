@@ -3,7 +3,7 @@
 import { AlertTriangle, Check, Trash2, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
-import { Button, CardSkeletonList, StateMessage } from '@/components';
+import { Button, CardSkeletonList, Select, StateMessage } from '@/components';
 import {
   addTeacher,
   approveTeacherSuggestion,
@@ -176,13 +176,13 @@ export default function AdminTeachersListPage() {
           placeholder="Teacher name"
           className="h-11 rounded-lg border border-line bg-card px-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark sm:col-span-2"
         />
-        <select
+        <Select
           value={departmentId}
           onChange={(e) => {
             setDepartmentId(e.target.value);
             setSelectedCourseIds([]);
           }}
-          className="h-11 rounded-lg border border-line bg-card px-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
+          className="h-11 rounded-lg border border-line bg-card pl-3 text-sm text-foreground dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
         >
           <option value="">Department</option>
           {departments.map((d) => (
@@ -190,7 +190,7 @@ export default function AdminTeachersListPage() {
               {d.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {departmentId && (
@@ -260,10 +260,12 @@ export default function AdminTeachersListPage() {
               </button>
             </div>
             <div className="mt-2 flex gap-2">
-              <select
+              <Select
                 value={assignCourseId[t.id] ?? ''}
                 onChange={(e) => setAssignCourseId((prev) => ({ ...prev, [t.id]: e.target.value }))}
-                className="h-9 flex-1 rounded-lg border border-line bg-background px-2 text-xs text-foreground outline-none dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+                containerClassName="flex-1"
+                chevronSize={14}
+                className="h-9 rounded-lg border border-line bg-background pl-2 text-xs text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
               >
                 <option value="">
                   {t.departmentId
@@ -280,7 +282,7 @@ export default function AdminTeachersListPage() {
                       {c.code ? `${c.code} — ${c.name}` : c.name}
                     </option>
                   ))}
-              </select>
+              </Select>
               <button
                 type="button"
                 onClick={() => handleAssign(t.id)}

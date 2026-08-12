@@ -6,6 +6,8 @@ export * from './Chip';
 export * from './Layout';
 export * from './Screen';
 export * from './SearchBar';
+export * from './Select';
 export * from './Skeleton';
 export * from './StateMessage';
+export * from './Switch';
 export * from './ThemeToggle';
