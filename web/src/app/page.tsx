@@ -1,9 +1,11 @@
 import {
   BookOpen,
   CheckCircle2,
+  ExternalLink,
   FileText,
   GraduationCap,
   HelpCircle,
+  Link2,
   MessageCircle,
   Quote,
   Search,
@@ -18,6 +20,7 @@ import React from 'react';
 
 import { PageShell, Screen } from '@/components';
 import { FAQS } from '@/features/faq/data';
+import { IMPORTANT_LINKS } from '@/features/links/data';
 import { fetchPapers } from '@/features/papers/api';
 import { getPaperFileType, PAPER_KIND_LABELS } from '@/features/papers/data';
 import { fetchRecentReviews } from '@/features/teachers/api';
@@ -197,6 +200,73 @@ export default async function HomePage() {
             ))}
           </div>
         </section>
+
+        {IMPORTANT_LINKS.length > 0 && (
+          <section className="mt-12">
+            <div className="mb-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+                Quick access
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-foreground dark:text-foreground-dark">
+                Important Links
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {IMPORTANT_LINKS.map((link) =>
+                link.comingSoon ? (
+                  <div
+                    key={link.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-card p-5 opacity-60 dark:border-line-dark dark:bg-card-dark"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10">
+                        <Link2 size={20} className="text-accent" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground dark:text-foreground-dark">
+                          {link.title}
+                        </p>
+                        {link.subtitle && (
+                          <p className="mt-0.5 text-xs text-muted dark:text-muted-dark">
+                            {link.subtitle}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded-md bg-line px-2 py-1 text-xs font-medium text-muted dark:bg-line-dark dark:text-muted-dark">
+                      Coming soon
+                    </span>
+                  </div>
+                ) : (
+                  <a
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-card p-5 transition-transform duration-150 hover:-translate-y-0.5 dark:border-line-dark dark:bg-card-dark"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10">
+                        <Link2 size={20} className="text-accent" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground dark:text-foreground-dark">
+                          {link.title}
+                        </p>
+                        {link.subtitle && (
+                          <p className="mt-0.5 text-xs text-muted dark:text-muted-dark">
+                            {link.subtitle}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <ExternalLink size={16} className="shrink-0 text-muted dark:text-muted-dark" />
+                  </a>
+                ),
+              )}
+            </div>
+          </section>
+        )}
 
         {recentReviews.length >= MIN_REVIEWS_TO_SHOW && (
           <section className="mt-12">

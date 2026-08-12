@@ -15,6 +15,8 @@ import {
 } from '@/components';
 import { upsertUserByGoogle } from '@/features/auth/api';
 import { signOutGoogle } from '@/features/auth/google';
+import { IMPORTANT_LINKS } from '@/features/links/data';
+import { ImportantLinkCard } from '@/features/links/ImportantLinkCard';
 import { fetchPapers } from '@/features/papers/api';
 import type { Paper } from '@/features/papers/data';
 import { PaperCard } from '@/features/papers/PaperCard';
@@ -314,6 +316,17 @@ export default function HomeScreen() {
                 </Card>
               ))}
             </View>
+
+            {IMPORTANT_LINKS.length > 0 && (
+              <>
+                <Text className="mb-3 mt-6 text-lg font-semibold text-foreground dark:text-foreground-dark">
+                  Important Links
+                </Text>
+                {IMPORTANT_LINKS.map((link) => (
+                  <ImportantLinkCard key={link.id} link={link} />
+                ))}
+              </>
+            )}
 
             {recentReviews.length >= MIN_REVIEWS_TO_SHOW && (
               <>
