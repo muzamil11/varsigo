@@ -77,6 +77,18 @@ Deno.serve(async (req) => {
       case 'rejectUpload':
         ({ error } = await supabase.from('uploads').delete().eq('id', payload.uploadId));
         break;
+      case 'updateUpload':
+        ({ error } = await supabase
+          .from('uploads')
+          .update({
+            title: sanitizeText(payload.title),
+            subject: sanitizeText(payload.subject),
+            department_id: payload.departmentId ?? null,
+            year: payload.year ?? null,
+            type: payload.kind,
+          })
+          .eq('id', payload.uploadId));
+        break;
       case 'listPendingLostFound': {
         const { data, error: listError } = await supabase
           .from('lost_found_items')

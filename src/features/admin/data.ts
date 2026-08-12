@@ -22,10 +22,12 @@ export interface AdminUpload {
   id: string;
   title: string;
   subject: string;
+  departmentId: string | null;
   department: string | null;
   year: number | null;
   kind: PaperKind;
   fileUrl: string;
+  fileUrls: string[];
   createdAt: string;
 }
 

@@ -135,11 +135,31 @@ interface RawPendingUploadRow {
   id: string;
   title: string;
   subject: string;
+  department_id: string | null;
   year: number | null;
   type: PaperKind;
   file_url: string;
+  file_urls: string[] | null;
   created_at: string;
   departments: { name: string } | null;
+}
+
+const UPLOAD_COLUMNS =
+  'id, title, subject, department_id, year, type, file_url, file_urls, created_at, departments(name)';
+
+function mapAdminUpload(u: RawPendingUploadRow): AdminUpload {
+  return {
+    id: u.id,
+    title: u.title,
+    subject: u.subject,
+    departmentId: u.department_id,
+    department: u.departments?.name ?? null,
+    year: u.year,
+    kind: u.type,
+    fileUrl: u.file_url,
+    fileUrls: u.file_urls?.length ? u.file_urls : [u.file_url],
+    createdAt: formatDate(u.created_at),
+  };
 }
 
 export async function fetchPendingUploads(adminEmail: string): Promise<AdminUpload[]> {
@@ -147,21 +167,30 @@ export async function fetchPendingUploads(adminEmail: string): Promise<AdminUplo
   try {
     const { data, error } = await supabase
       .from('uploads')
-      .select('id, title, subject, year, type, file_url, created_at, departments(name)')
+      .select(UPLOAD_COLUMNS)
       .eq('approved', false)
       .order('created_at', { ascending: false });
     if (error) throw error;
 
-    return ((data ?? []) as unknown as RawPendingUploadRow[]).map((u) => ({
-      id: u.id,
-      title: u.title,
-      subject: u.subject,
-      department: u.departments?.name ?? null,
-      year: u.year,
-      kind: u.type,
-      fileUrl: u.file_url,
-      createdAt: formatDate(u.created_at),
-    }));
+    return ((data ?? []) as unknown as RawPendingUploadRow[]).map(mapAdminUpload);
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
+/** Already-published papers (approved: true) — lets the admin edit/remove a
+ *  live paper later, separate from the moderation queue above. */
+export async function fetchApprovedUploads(adminEmail: string): Promise<AdminUpload[]> {
+  assertAdmin(adminEmail);
+  try {
+    const { data, error } = await supabase
+      .from('uploads')
+      .select(UPLOAD_COLUMNS)
+      .eq('approved', true)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    return ((data ?? []) as unknown as RawPendingUploadRow[]).map(mapAdminUpload);
   } catch (error) {
     throw new Error(toFriendlyError(error));
   }
@@ -187,6 +216,42 @@ export async function rejectUpload(adminEmail: string, uploadId: string): Promis
   }
   try {
     const { error } = await supabase.from('uploads').delete().eq('id', uploadId);
+    if (error) throw error;
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
+export interface UpdateUploadInput {
+  title: string;
+  subject: string;
+  departmentId: string | null;
+  year: number | null;
+  kind: PaperKind;
+}
+
+/** Edits a paper's metadata — works on a pending OR already-published
+ *  upload alike (no `approved` filter), same as rejectUpload above. */
+export async function updateUpload(
+  adminEmail: string,
+  uploadId: string,
+  input: UpdateUploadInput,
+): Promise<void> {
+  assertAdmin(adminEmail);
+  if (isAdminFunctionConfigured()) {
+    return callAdminFunction<void>('updateUpload', { uploadId, ...input });
+  }
+  try {
+    const { error } = await supabase
+      .from('uploads')
+      .update({
+        title: sanitizeText(input.title),
+        subject: sanitizeText(input.subject),
+        department_id: input.departmentId,
+        year: input.year,
+        type: input.kind,
+      })
+      .eq('id', uploadId);
     if (error) throw error;
   } catch (error) {
     throw new Error(toFriendlyError(error));

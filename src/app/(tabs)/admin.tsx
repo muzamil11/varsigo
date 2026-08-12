@@ -30,6 +30,7 @@ import {
   fetchAdminCourses,
   fetchAdminStats,
   fetchAdminTeachers,
+  fetchApprovedUploads,
   fetchPendingReviews,
   fetchPendingTeacherSuggestions,
   fetchPendingUploads,
@@ -38,7 +39,9 @@ import {
   rejectReview,
   rejectTeacherSuggestion,
   rejectUpload,
+  updateUpload,
 } from '@/features/admin/api';
+import type { UpdateUploadInput } from '@/features/admin/api';
 import { AdminTeachersPanel } from '@/features/admin/AdminTeachersPanel';
 import type {
   AdminDepartment,
@@ -109,6 +112,8 @@ export default function AdminScreen() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [uploads, setUploads] = useState<AdminUpload[]>([]);
+  const [publishedUploads, setPublishedUploads] = useState<AdminUpload[]>([]);
+  const [uploadsView, setUploadsView] = useState<'pending' | 'published'>('pending');
   const [adminDepartments, setAdminDepartments] = useState<AdminDepartment[]>([]);
   const [adminCourses, setAdminCourses] = useState<AdminCourse[]>([]);
   const [adminTeachers, setAdminTeachers] = useState<AdminTeacher[]>([]);
@@ -135,6 +140,7 @@ export default function AdminScreen() {
         loadAdminResource('stats', fetchAdminStats(user.email)),
         loadAdminResource('reviews', fetchPendingReviews(user.email)),
         loadAdminResource('uploads', fetchPendingUploads(user.email)),
+        loadAdminResource('published uploads', fetchApprovedUploads(user.email)),
         loadAdminResource('departments', fetchAdminDepartments(user.email)),
         loadAdminResource('courses', fetchAdminCourses(user.email)),
         loadAdminResource('teachers', fetchAdminTeachers(user.email)),
@@ -159,6 +165,7 @@ export default function AdminScreen() {
         statsResult,
         reviewsResult,
         uploadsResult,
+        publishedUploadsResult,
         adminDepartmentsResult,
         coursesResult,
         teachersResult,
@@ -170,6 +177,7 @@ export default function AdminScreen() {
       if (statsResult.status === 'fulfilled') setStats(statsResult.value);
       if (reviewsResult.status === 'fulfilled') setReviews(reviewsResult.value);
       if (uploadsResult.status === 'fulfilled') setUploads(uploadsResult.value);
+      if (publishedUploadsResult.status === 'fulfilled') setPublishedUploads(publishedUploadsResult.value);
       if (adminDepartmentsResult.status === 'fulfilled') setAdminDepartments(adminDepartmentsResult.value);
       if (coursesResult.status === 'fulfilled') setAdminCourses(coursesResult.value);
       if (teachersResult.status === 'fulfilled') setAdminTeachers(teachersResult.value);
@@ -257,6 +265,7 @@ export default function AdminScreen() {
       setStats((s) =>
         s ? { ...s, pendingUploads: s.pendingUploads - 1, approvedUploads: s.approvedUploads + 1 } : s,
       );
+      setPublishedUploads((prev) => [upload, ...prev]);
     } catch (err) {
       Alert.alert('Could not approve', err instanceof Error ? err.message : 'Please try again.');
       setUploads((prev) => [upload, ...prev]);
@@ -272,6 +281,39 @@ export default function AdminScreen() {
       Alert.alert('Could not reject', err instanceof Error ? err.message : 'Please try again.');
       setUploads((prev) => [upload, ...prev]);
     }
+  };
+
+  const handleDeletePublishedUpload = (upload: AdminUpload) => {
+    Alert.alert('Delete this paper?', 'It will be removed from the site immediately.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setPublishedUploads((prev) => prev.filter((u) => u.id !== upload.id));
+          try {
+            await rejectUpload(user!.email, upload.id);
+            setStats((s) => (s ? { ...s, approvedUploads: s.approvedUploads - 1 } : s));
+          } catch (err) {
+            Alert.alert('Could not delete', err instanceof Error ? err.message : 'Please try again.');
+            setPublishedUploads((prev) => [upload, ...prev]);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleUpdateUpload = async (
+    upload: AdminUpload,
+    input: UpdateUploadInput,
+    scope: 'pending' | 'published',
+  ) => {
+    if (!user) return;
+    await updateUpload(user.email, upload.id, input);
+    const department = adminDepartments.find((d) => d.id === input.departmentId)?.name ?? null;
+    const patch = { ...input, department };
+    const setter = scope === 'pending' ? setUploads : setPublishedUploads;
+    setter((prev) => prev.map((u) => (u.id === upload.id ? { ...u, ...patch } : u)));
   };
 
   const handleAddTeacher = async (name: string, departmentId: string, courseIds: string[]) => {
@@ -600,29 +642,53 @@ export default function AdminScreen() {
               }
             />
           ) : segment === 'uploads' ? (
-            <FlatList
-              data={uploads}
-              keyExtractor={(u) => u.id}
-              contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
-              keyboardDismissMode="on-drag"
-              refreshing={refreshing}
-              onRefresh={() => load('refresh')}
-              ItemSeparatorComponent={() => (
-                <View className="mb-3 h-px bg-line dark:bg-line-dark" />
-              )}
-              renderItem={({ item, index }) => (
-                <AnimatedListItem index={index}>
-                  <AdminUploadCard
-                    upload={item}
-                    onApprove={() => handleApproveUpload(item)}
-                    onReject={() => handleRejectUpload(item)}
+            <View style={{ flex: 1 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+              >
+                <Chip
+                  label={`Pending (${uploads.length})`}
+                  selected={uploadsView === 'pending'}
+                  onPress={() => setUploadsView('pending')}
+                />
+                <Chip
+                  label={`Published (${publishedUploads.length})`}
+                  selected={uploadsView === 'published'}
+                  onPress={() => setUploadsView('published')}
+                />
+              </ScrollView>
+              <FlatList
+                data={uploadsView === 'pending' ? uploads : publishedUploads}
+                keyExtractor={(u) => u.id}
+                contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+                keyboardDismissMode="on-drag"
+                refreshing={refreshing}
+                onRefresh={() => load('refresh')}
+                ItemSeparatorComponent={() => (
+                  <View className="mb-3 h-px bg-line dark:bg-line-dark" />
+                )}
+                renderItem={({ item, index }) => (
+                  <AnimatedListItem index={index}>
+                    <AdminUploadCard
+                      upload={item}
+                      departments={adminDepartments}
+                      onApprove={uploadsView === 'pending' ? () => handleApproveUpload(item) : undefined}
+                      onReject={uploadsView === 'pending' ? () => handleRejectUpload(item) : undefined}
+                      onDelete={uploadsView === 'published' ? () => handleDeletePublishedUpload(item) : undefined}
+                      onSave={(input) => handleUpdateUpload(item, input, uploadsView)}
+                    />
+                  </AnimatedListItem>
+                )}
+                ListEmptyComponent={
+                  <StateMessage
+                    icon="checkmark-circle-outline"
+                    title={uploadsView === 'pending' ? 'No pending uploads 🎉' : 'Nothing published yet'}
                   />
-                </AnimatedListItem>
-              )}
-              ListEmptyComponent={
-                <StateMessage icon="checkmark-circle-outline" title="No pending uploads 🎉" />
-              }
-            />
+                }
+              />
+            </View>
           ) : segment === 'teachers' ? (
             <AdminTeachersPanel
               step={teacherStep}
