@@ -4,6 +4,7 @@ import {
   FileText,
   GraduationCap,
   HelpCircle,
+  Image as ImageIcon,
   MessageCircle,
   Quote,
   Search,
@@ -18,6 +19,8 @@ import React from 'react';
 
 import { PageShell, Screen } from '@/components';
 import { FAQS } from '@/features/faq/data';
+import { fetchPapers } from '@/features/papers/api';
+import { getPaperFileType, PAPER_KIND_LABELS } from '@/features/papers/data';
 import { fetchRecentReviews } from '@/features/teachers/api';
 
 export const revalidate = 300;
@@ -26,6 +29,9 @@ const RECENT_REVIEWS_COUNT = 3;
 // Below this, the section reads as an empty/ghost-town platform rather than
 // a highlight — better to just not show it yet.
 const MIN_REVIEWS_TO_SHOW = 2;
+
+const RECENT_PAPERS_COUNT = 3;
+const MIN_PAPERS_TO_SHOW = 2;
 
 const STATS = [
   { label: 'CSIT MS courses', value: '40+' },
@@ -101,6 +107,13 @@ export default async function HomePage() {
     recentReviews = await fetchRecentReviews(RECENT_REVIEWS_COUNT);
   } catch {
     recentReviews = [];
+  }
+
+  let recentPapers: Awaited<ReturnType<typeof fetchPapers>> = [];
+  try {
+    recentPapers = (await fetchPapers()).slice(0, RECENT_PAPERS_COUNT);
+  } catch {
+    recentPapers = [];
   }
 
   return (
@@ -218,6 +231,54 @@ export default async function HomePage() {
                   </p>
                 </Link>
               ))}
+            </div>
+          </section>
+        )}
+
+        {recentPapers.length >= MIN_PAPERS_TO_SHOW && (
+          <section className="mt-12">
+            <div className="mb-5 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+                  Study resources
+                </p>
+                <h2 className="mt-2 text-2xl font-bold text-foreground dark:text-foreground-dark">
+                  Recently shared papers
+                </h2>
+              </div>
+              <Link href="/papers" className="text-sm font-semibold text-accent">
+                Browse all
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {recentPapers.map((paper) => {
+                const Icon = getPaperFileType(paper.fileUrl) === 'image' ? ImageIcon : FileText;
+                return (
+                  <Link
+                    key={paper.id}
+                    href="/papers"
+                    className="rounded-2xl border border-line bg-card p-5 transition-transform duration-150 hover:-translate-y-0.5 dark:border-line-dark dark:bg-card-dark"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10">
+                        <Icon size={17} className="text-accent" />
+                      </div>
+                      <span className="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent">
+                        {PAPER_KIND_LABELS[paper.kind]}
+                      </span>
+                    </div>
+                    <p className="mt-3 line-clamp-2 text-sm font-semibold text-foreground dark:text-foreground-dark">
+                      {paper.title}
+                    </p>
+                    <p className="mt-1 text-xs text-muted dark:text-muted-dark">
+                      {[paper.department, paper.year].filter(Boolean).join(' · ')}
+                    </p>
+                    <p className="mt-4 text-xs font-medium text-muted dark:text-muted-dark">
+                      Shared by {paper.uploaderName}
+                    </p>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}
