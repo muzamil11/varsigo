@@ -2,11 +2,12 @@
 
 import { GraduationCap } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
+import type { User as FirebaseUser } from 'firebase/auth';
 
 import { Button, Screen } from '@/components';
 import { upsertUserByGoogle } from '@/features/auth/api';
-import { signInWithGoogle } from '@/features/auth/google';
+import { completeGoogleRedirectSignIn, signInWithGoogle } from '@/features/auth/google';
 import { getPostAuthRoute, withRedirect } from '@/lib/routing';
 import { useAuthStore } from '@/store/authStore';
 import { usePrivacyStore } from '@/store/privacyStore';
@@ -23,31 +24,66 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect');
-  const [loading, setLoading] = useState(false);
+  // Starts true: on mobile we might be landing back here right after a
+  // signInWithRedirect() round trip to Google, and shouldn't flash the
+  // plain "Continue with Google" button before that's checked.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const finishSignIn = async (firebaseUser: FirebaseUser) => {
+    if (!firebaseUser.email) {
+      throw new Error('Your Google account has no email attached. Please try a different account.');
+    }
+
+    const supabaseUser = await upsertUserByGoogle({
+      firebaseUid: firebaseUser.uid,
+      email: firebaseUser.email,
+    });
+    useAuthStore.getState().setUser(firebaseUser.uid, supabaseUser);
+    const nextRoute = getPostAuthRoute(supabaseUser, usePrivacyStore.getState().accepted, redirectTo);
+    // Deliberately not resetting `loading` here — the button should stay
+    // in its spinner state through the navigation below rather than
+    // flashing back to normal for the moment before the next page (and,
+    // in dev, its on-demand Turbopack compile) actually appears. Without
+    // this, the page can look like it silently hung.
+    const isIntermediateStep = nextRoute === '/onboarding-name' || nextRoute === '/privacy-notice';
+    router.replace(isIntermediateStep ? withRedirect(nextRoute, redirectTo) : nextRoute);
+  };
+
+  // Picks up the result of a mobile signInWithGoogle() redirect — a no-op
+  // (resolves null) on a normal, non-redirect page load.
+  useEffect(() => {
+    let cancelled = false;
+    completeGoogleRedirectSignIn()
+      .then(async (firebaseUser) => {
+        if (cancelled) return;
+        if (firebaseUser) {
+          await finishSignIn(firebaseUser);
+        } else {
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'Please try again.');
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
     try {
       const firebaseUser = await signInWithGoogle();
-      if (!firebaseUser.email) {
-        throw new Error('Your Google account has no email attached. Please try a different account.');
+      // null means signInWithGoogle() kicked off a mobile redirect instead
+      // — the browser is already navigating to Google, nothing more to do.
+      if (firebaseUser) {
+        await finishSignIn(firebaseUser);
       }
-
-      const supabaseUser = await upsertUserByGoogle({
-        firebaseUid: firebaseUser.uid,
-        email: firebaseUser.email,
-      });
-      useAuthStore.getState().setUser(firebaseUser.uid, supabaseUser);
-      const nextRoute = getPostAuthRoute(supabaseUser, usePrivacyStore.getState().accepted, redirectTo);
-      // Deliberately not resetting `loading` here — the button should stay
-      // in its spinner state through the navigation below rather than
-      // flashing back to normal for the moment before the next page (and,
-      // in dev, its on-demand Turbopack compile) actually appears. Without
-      // this, the page can look like it silently hung.
-      const isIntermediateStep = nextRoute === '/onboarding-name' || nextRoute === '/privacy-notice';
-      router.replace(isIntermediateStep ? withRedirect(nextRoute, redirectTo) : nextRoute);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Please try again.');
       setLoading(false);
