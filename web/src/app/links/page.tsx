@@ -6,7 +6,7 @@ import { fetchImportantLinks } from '@/features/links/api';
 import { LinksGrid } from '@/features/links/LinksGrid';
 import { SuggestLinkForm } from '@/features/links/SuggestLinkForm';
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'Important Links',

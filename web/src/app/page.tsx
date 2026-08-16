@@ -25,7 +25,10 @@ import { fetchPapers } from '@/features/papers/api';
 import { getPaperFileType, PAPER_KIND_LABELS } from '@/features/papers/data';
 import { fetchRecentReviews } from '@/features/teachers/api';
 
-export const revalidate = 300;
+// Shorter than the old 300s — this page also shows the Important Links
+// preview, which should catch up soon after admin adds/approves a link
+// instead of staying stale for 5 min.
+export const revalidate = 60;
 
 const RECENT_REVIEWS_COUNT = 3;
 // Below this, the section reads as an empty/ghost-town platform rather than
