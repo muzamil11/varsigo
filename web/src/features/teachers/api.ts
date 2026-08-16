@@ -7,6 +7,7 @@ import {
   isReportReviewFunctionConfigured,
 } from '@/lib/reviewFunction';
 import { supabase, toFriendlyError } from '@/lib/supabase';
+import { fetchModerationSettings } from '@/features/settings/api';
 import type { RecentReview, TeacherDetail, TeacherListItem, TeacherReview } from './data';
 import { analyzeReviewQuality } from './quality';
 
@@ -425,6 +426,8 @@ export async function submitReview(input: SubmitReviewInput): Promise<void> {
       throw new Error('You already submitted a very similar review for this teacher recently.');
     }
 
+    const { reviewsRequireApproval } = await fetchModerationSettings();
+
     const reviewPayload: Record<string, unknown> = {
       teacher_id: input.teacherId,
       user_id: input.userId,
@@ -436,7 +439,7 @@ export async function submitReview(input: SubmitReviewInput): Promise<void> {
       quality_flags: quality.flags,
       moderation_priority: quality.priority,
       review_fingerprint: quality.fingerprint,
-      approved: false,
+      approved: !reviewsRequireApproval,
     };
     if (input.courseId) reviewPayload.course_id = input.courseId;
 
@@ -482,11 +485,12 @@ export async function suggestTeacher(input: SuggestTeacherInput): Promise<void> 
   }
 
   try {
+    const { teacherSuggestionsRequireApproval } = await fetchModerationSettings();
     const { error } = await supabase.from('teacher_suggestions').insert({
       name: sanitizeText(input.name),
       department_id: input.departmentId,
       suggested_by: input.userId,
-      approved: false,
+      approved: !teacherSuggestionsRequireApproval,
     });
     if (error) throw error;
   } catch (error) {

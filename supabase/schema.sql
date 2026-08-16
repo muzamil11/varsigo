@@ -534,6 +534,48 @@ drop policy if exists "public delete important links" on important_links;
 create policy "public delete important links" on important_links for delete using (true);
 
 -- ─────────────────────────────────────────────────────────────────────────
+-- Moderation settings — one global switch per content type, letting admin
+-- turn "requires approval" on/off from Admin → Settings without a code
+-- change or redeploy. Off means new submissions insert already approved
+-- (`approved: true`); on (the default) keeps the existing pending-review
+-- behavior. Singleton table: `id` is a boolean primary key constrained to
+-- always be `true`, so there can only ever be exactly one settings row.
+--
+-- Only covers content types that insert directly from the client
+-- (reviews, uploads, teacher_suggestions, important_links) — Lost & Found
+-- always goes through a separate Supabase Edge Function
+-- (src/lib/communityFunction.ts's callCommunityFunction), so its
+-- approval behavior lives in that function's own code, not here.
+-- ─────────────────────────────────────────────────────────────────────────
+
+create table if not exists moderation_settings (
+  id boolean primary key default true check (id),
+  reviews_require_approval boolean not null default true,
+  uploads_require_approval boolean not null default true,
+  teacher_suggestions_require_approval boolean not null default true,
+  important_links_require_approval boolean not null default true,
+  updated_at timestamptz default now()
+);
+
+alter table moderation_settings add column if not exists reviews_require_approval boolean not null default true;
+alter table moderation_settings add column if not exists uploads_require_approval boolean not null default true;
+alter table moderation_settings add column if not exists teacher_suggestions_require_approval boolean not null default true;
+alter table moderation_settings add column if not exists important_links_require_approval boolean not null default true;
+
+insert into moderation_settings (id) values (true) on conflict (id) do nothing;
+
+alter table moderation_settings enable row level security;
+
+-- Every signed-in submission flow needs to read this before inserting, so
+-- read is public; only admin (gated client-side, same as everywhere else
+-- in this schema) ever calls update.
+drop policy if exists "public read moderation settings" on moderation_settings;
+create policy "public read moderation settings" on moderation_settings for select using (true);
+
+drop policy if exists "public update moderation settings" on moderation_settings;
+create policy "public update moderation settings" on moderation_settings for update using (true) with check (true);
+
+-- ─────────────────────────────────────────────────────────────────────────
 -- Storage — "papers" bucket for uploaded PDFs
 -- ─────────────────────────────────────────────────────────────────────────
 

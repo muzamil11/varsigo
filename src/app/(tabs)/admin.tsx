@@ -57,10 +57,11 @@ import { AdminUploadCard } from '@/features/admin/AdminUploadCard';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
 import { AdminLinksPanel } from '@/features/links/AdminLinksPanel';
+import { AdminSettingsPanel } from '@/features/settings/AdminSettingsPanel';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeColors } from '@/store/themeStore';
 
-type Segment = 'reviews' | 'uploads' | 'teachers' | 'community' | 'links';
+type Segment = 'reviews' | 'uploads' | 'teachers' | 'community' | 'links' | 'settings';
 
 async function loadAdminResource<T>(name: string, request: Promise<T>): Promise<T> {
   try {
@@ -604,6 +605,11 @@ export default function AdminScreen() {
             selected={segment === 'links'}
             onPress={() => setSegment('links')}
           />
+          <Chip
+            label="Settings"
+            selected={segment === 'settings'}
+            onPress={() => setSegment('settings')}
+          />
         </ScrollView>
       </View>
 
@@ -737,8 +743,10 @@ export default function AdminScreen() {
                 <StateMessage icon="checkmark-circle-outline" title="No community reports" />
               }
             />
-          ) : (
+          ) : segment === 'links' ? (
             <AdminLinksPanel />
+          ) : (
+            <AdminSettingsPanel />
           )}
         </Animated.View>
       )}

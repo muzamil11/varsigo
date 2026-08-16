@@ -2,6 +2,7 @@ import { isAdminEmail } from '@/lib/admin';
 import { callCommunityFunction, isCommunityFunctionConfigured } from '@/lib/communityFunction';
 import { sanitizeText } from '@/lib/sanitize';
 import { PAPERS_BUCKET, supabase, toFriendlyError } from '@/lib/supabase';
+import { fetchModerationSettings } from '@/features/settings/api';
 import type { Paper, PaperKind } from './data';
 
 interface RawUploadRow {
@@ -224,6 +225,7 @@ export async function uploadPaper(input: UploadPaperInput): Promise<void> {
         fileUrls: uploadedUrls,
       });
     } else {
+      const { uploadsRequireApproval } = await fetchModerationSettings();
       const { error: insertError } = await supabase.from('uploads').insert({
         user_id: input.userId,
         title: sanitizeText(input.title),
@@ -233,7 +235,7 @@ export async function uploadPaper(input: UploadPaperInput): Promise<void> {
         type: input.kind,
         file_url: uploadedUrls[0],
         file_urls: uploadedUrls,
-        approved: false,
+        approved: !uploadsRequireApproval,
       });
       if (insertError) throw insertError;
     }

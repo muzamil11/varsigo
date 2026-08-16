@@ -1,6 +1,7 @@
 import { isAdminEmail } from '@/lib/admin';
 import { sanitizeText } from '@/lib/sanitize';
 import { supabase, toFriendlyError } from '@/lib/supabase';
+import { fetchModerationSettings } from '@/features/settings/api';
 import type { ImportantLink, PendingImportantLink } from './data';
 
 /** Re-checks the caller's email against EXPO_PUBLIC_ADMIN_EMAIL before
@@ -72,12 +73,13 @@ export async function suggestImportantLink(input: SuggestImportantLinkInput): Pr
   const url = input.url.trim();
   assertValidUrl(url);
   try {
+    const { importantLinksRequireApproval } = await fetchModerationSettings();
     const { error } = await supabase.from('important_links').insert({
       title: sanitizeText(input.title),
       subtitle: input.subtitle?.trim() ? sanitizeText(input.subtitle) : null,
       url,
       user_id: input.userId,
-      approved: false,
+      approved: !importantLinksRequireApproval,
     });
     if (error) throw error;
   } catch (error) {
