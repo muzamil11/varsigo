@@ -18,7 +18,7 @@ function ErrorFallback({ onRetry }: { onRetry: () => void }) {
         Something went wrong
       </Text>
       <Text className="mb-6 text-center text-sm text-muted dark:text-muted-dark">
-        Varsigo ran into an unexpected error. Try again — if it keeps happening, close and
+        NEDHub ran into an unexpected error. Try again — if it keeps happening, close and
         reopen the app.
       </Text>
       <Button label="Try again" onPress={onRetry} />

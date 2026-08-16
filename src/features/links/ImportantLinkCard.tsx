@@ -7,17 +7,13 @@ import type { ImportantLink } from './data';
 
 export function ImportantLinkCard({ link }: { link: ImportantLink }) {
   const handlePress = () => {
-    if (link.comingSoon) return;
     Linking.openURL(link.url).catch(() =>
       Alert.alert('Could not open link', 'Please check your internet connection and try again.'),
     );
   };
 
   return (
-    <Card
-      onPress={handlePress}
-      className={`mb-3 flex-row items-center ${link.comingSoon ? 'opacity-60' : ''}`}
-    >
+    <Card onPress={handlePress} className="mb-3 flex-row items-center">
       <View className="h-10 w-10 items-center justify-center rounded-full bg-accent/15">
         <Ionicons name="link-outline" size={18} color="#6366F1" />
       </View>
@@ -29,13 +25,7 @@ export function ImportantLinkCard({ link }: { link: ImportantLink }) {
           <Text className="mt-0.5 text-xs text-muted dark:text-muted-dark">{link.subtitle}</Text>
         )}
       </View>
-      {link.comingSoon ? (
-        <View className="rounded-md bg-line px-2 py-1 dark:bg-line-dark">
-          <Text className="text-xs font-medium text-muted dark:text-muted-dark">Coming soon</Text>
-        </View>
-      ) : (
-        <Ionicons name="open-outline" size={16} color="#71717A" />
-      )}
+      <Ionicons name="open-outline" size={16} color="#71717A" />
     </Card>
   );
 }

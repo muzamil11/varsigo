@@ -15,7 +15,8 @@ import {
 } from '@/components';
 import { upsertUserByGoogle } from '@/features/auth/api';
 import { signOutGoogle } from '@/features/auth/google';
-import { IMPORTANT_LINKS } from '@/features/links/data';
+import { fetchImportantLinks } from '@/features/links/api';
+import type { ImportantLink } from '@/features/links/data';
 import { ImportantLinkCard } from '@/features/links/ImportantLinkCard';
 import { fetchPapers } from '@/features/papers/api';
 import type { Paper } from '@/features/papers/data';
@@ -56,6 +57,7 @@ const QUICK_ACTIONS = [
 const RECENT_PAPERS_COUNT = 3;
 const TOP_TEACHERS_COUNT = 3;
 const RECENT_REVIEWS_COUNT = 3;
+const HOME_LINKS_COUNT = 3;
 // Below this, the section reads as an empty/ghost-town platform rather than
 // a highlight — better to just not show it yet.
 const MIN_REVIEWS_TO_SHOW = 2;
@@ -70,6 +72,7 @@ export default function HomeScreen() {
   const [allTeachers, setAllTeachers] = useState<TeacherListItem[]>([]);
   const [allPapers, setAllPapers] = useState<Paper[]>([]);
   const [recentReviews, setRecentReviews] = useState<RecentReview[]>([]);
+  const [importantLinks, setImportantLinks] = useState<ImportantLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -147,16 +150,18 @@ export default function HomeScreen() {
         });
         useAuthStore.getState().updateUser(currentUser);
       }
-      const [teachers, papers, reviews] = await Promise.all([
+      const [teachers, papers, reviews, links] = await Promise.all([
         fetchTeachers(),
         fetchPapers(),
         // Best-effort — a highlight reel failing to load shouldn't take the
         // rest of the Home screen down with it.
         fetchRecentReviews(RECENT_REVIEWS_COUNT).catch(() => []),
+        fetchImportantLinks().catch(() => []),
       ]);
       setAllTeachers(teachers);
       setAllPapers(papers);
       setRecentReviews(reviews);
+      setImportantLinks(links);
       hasLoaded.current = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -229,7 +234,7 @@ export default function HomeScreen() {
           <View>
             <Text className="text-sm text-muted dark:text-muted-dark">NED University</Text>
             <Text className="text-2xl font-bold text-foreground dark:text-foreground-dark">
-              {userName ? `Hi, ${userName} 👋` : 'Varsigo'}
+              {userName ? `Hi, ${userName} 👋` : 'NEDHub'}
             </Text>
           </View>
           <View className="flex-row items-center gap-2">
@@ -317,12 +322,17 @@ export default function HomeScreen() {
               ))}
             </View>
 
-            {IMPORTANT_LINKS.length > 0 && (
+            {importantLinks.length > 0 && (
               <>
-                <Text className="mb-3 mt-6 text-lg font-semibold text-foreground dark:text-foreground-dark">
-                  Important Links
-                </Text>
-                {IMPORTANT_LINKS.map((link) => (
+                <View className="mb-3 mt-6 flex-row items-center justify-between">
+                  <Text className="text-lg font-semibold text-foreground dark:text-foreground-dark">
+                    Important Links
+                  </Text>
+                  <Pressable onPress={() => router.push('/links')} hitSlop={8}>
+                    <Text className="text-sm font-semibold text-accent">View all</Text>
+                  </Pressable>
+                </View>
+                {importantLinks.slice(0, HOME_LINKS_COUNT).map((link) => (
                   <ImportantLinkCard key={link.id} link={link} />
                 ))}
               </>

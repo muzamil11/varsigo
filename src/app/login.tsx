@@ -43,7 +43,7 @@ export default function LoginScreen() {
             <Ionicons name="school" size={28} color="#FFFFFF" />
           </View>
           <Text className="text-2xl font-bold text-foreground dark:text-foreground-dark">
-            Welcome to Varsigo
+            Welcome to NEDHub
           </Text>
           <Text className="mt-2 text-base text-muted dark:text-muted-dark">
             Sign in with Google to continue

@@ -56,10 +56,11 @@ import type {
 import { AdminUploadCard } from '@/features/admin/AdminUploadCard';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
+import { AdminLinksPanel } from '@/features/links/AdminLinksPanel';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeColors } from '@/store/themeStore';
 
-type Segment = 'reviews' | 'uploads' | 'teachers' | 'community';
+type Segment = 'reviews' | 'uploads' | 'teachers' | 'community' | 'links';
 
 async function loadAdminResource<T>(name: string, request: Promise<T>): Promise<T> {
   try {
@@ -598,6 +599,11 @@ export default function AdminScreen() {
             selected={segment === 'community'}
             onPress={() => setSegment('community')}
           />
+          <Chip
+            label="Links"
+            selected={segment === 'links'}
+            onPress={() => setSegment('links')}
+          />
         </ScrollView>
       </View>
 
@@ -710,7 +716,7 @@ export default function AdminScreen() {
               onApproveSuggestion={handleApproveSuggestion}
               onRejectSuggestion={handleRejectSuggestion}
             />
-          ) : (
+          ) : segment === 'community' ? (
             <FlatList
               data={communityReports}
               keyExtractor={(item) => `${item.kind}-${item.id}`}
@@ -731,6 +737,8 @@ export default function AdminScreen() {
                 <StateMessage icon="checkmark-circle-outline" title="No community reports" />
               }
             />
+          ) : (
+            <AdminLinksPanel />
           )}
         </Animated.View>
       )}

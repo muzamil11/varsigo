@@ -1,5 +1,5 @@
 // Hand-written to match supabase/schema.sql (same Supabase project as the
-// Expo app — see /home/user/varsigo/src/lib/database.types.ts, the source of
+// Expo app — see /home/user/nedhub/src/lib/database.types.ts, the source of
 // truth this file is kept in sync with).
 //
 // Deliberately NOT wired into `createClient<Database>()` — the installed

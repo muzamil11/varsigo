@@ -6,7 +6,10 @@ import { fetchDepartments } from '@/features/departments/api';
 import { TeacherBrowser } from '@/features/teachers/TeacherBrowser';
 import { fetchTeachers } from '@/features/teachers/api';
 
-export const revalidate = 300;
+// Shorter than most other pages' 300s — this page shows each teacher's
+// aggregate rating/review count, which should catch up reasonably soon
+// after an admin approves a new review instead of staying stale for 5 min.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'Teachers',

@@ -19,7 +19,7 @@ function ErrorFallback({ onRetry }: { onRetry: () => void }) {
         Something went wrong
       </p>
       <p className="mb-6 text-center text-sm text-muted dark:text-muted-dark">
-        Varsigo ran into an unexpected error. Try again — if it keeps happening, reload the page.
+        NEDHub ran into an unexpected error. Try again — if it keeps happening, reload the page.
       </p>
       <Button label="Try again" onPress={onRetry} />
     </div>

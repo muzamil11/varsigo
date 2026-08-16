@@ -98,7 +98,7 @@ function LoginPageContent() {
             <GraduationCap size={28} color="#FFFFFF" />
           </div>
           <h1 className="text-2xl font-bold text-foreground dark:text-foreground-dark">
-            Welcome to Varsigo
+            Welcome to NEDHub
           </h1>
           <p className="mt-2 text-base text-muted dark:text-muted-dark">
             Sign in with Google to continue

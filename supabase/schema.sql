@@ -1,4 +1,4 @@
--- Varsigo — Supabase schema
+-- NEDHub — Supabase schema
 -- Run this once in your project's SQL Editor (https://supabase.com/dashboard → SQL Editor → New query).
 -- Safe to re-run: every statement is idempotent (create-if-not-exists / drop-if-exists).
 
@@ -492,6 +492,46 @@ create policy "public read question reports" on question_reports for select usin
 
 drop policy if exists "public read answer reports" on answer_reports;
 create policy "public read answer reports" on answer_reports for select using (true);
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- Important links (Home screen's "Important Links" section) — admin can add
+-- one directly (auto-approved), or any signed-in student can suggest one
+-- (e.g. a WhatsApp group or Drive folder link) for admin approval, same
+-- suggest-then-approve shape as teacher_suggestions.
+-- ─────────────────────────────────────────────────────────────────────────
+
+create table if not exists important_links (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  subtitle text,
+  url text not null,
+  user_id uuid references users(id) on delete set null,
+  approved boolean default false,
+  created_at timestamptz default now()
+);
+
+alter table important_links add column if not exists user_id uuid references users(id) on delete set null;
+alter table important_links add column if not exists approved boolean default false;
+
+alter table important_links enable row level security;
+
+-- Read/insert/delete are technically open at the RLS layer, same as the
+-- rest of this schema's admin-managed tables (departments, teachers, ...)
+-- — the real gate is the client-side email check in src/lib/admin.ts, used
+-- by every admin-only call in src/features/links/api.ts. Unapproved
+-- (pending) links are simply never queried for on the public Home/Links
+-- pages, which only ever fetch `approved = true` rows.
+drop policy if exists "public read important links" on important_links;
+create policy "public read important links" on important_links for select using (true);
+
+drop policy if exists "public insert important links" on important_links;
+create policy "public insert important links" on important_links for insert with check (true);
+
+drop policy if exists "public update important links" on important_links;
+create policy "public update important links" on important_links for update using (true) with check (true);
+
+drop policy if exists "public delete important links" on important_links;
+create policy "public delete important links" on important_links for delete using (true);
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- Storage — "papers" bucket for uploaded PDFs

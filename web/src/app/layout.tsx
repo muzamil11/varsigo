@@ -8,11 +8,11 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Varsigo - NED University Teacher Reviews, Past Papers & FAQ',
-    template: '%s | Varsigo',
+    default: 'NEDHub - NED University Teacher Reviews, Past Papers & FAQ',
+    template: '%s | NEDHub',
   },
   description:
-    'Varsigo helps NED University students find honest teacher reviews, past papers, notes, and answers to common university questions.',
+    'NEDHub helps NED University students find honest teacher reviews, past papers, notes, and answers to common university questions.',
 };
 
 const THEME_SCRIPT = `(function(){try{var raw=localStorage.getItem('varsigo-theme');var theme=raw?JSON.parse(raw).state.theme:'dark';if(theme==='dark')document.documentElement.classList.add('dark');}catch(e){document.documentElement.classList.add('dark');}})();`;

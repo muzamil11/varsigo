@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 
 import { fetchTeachers } from '@/features/teachers/api';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://varsigo.vercel.app';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nedhub.vercel.app';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -10,6 +10,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/teachers`, changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE_URL}/papers`, changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE_URL}/faq`, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${SITE_URL}/links`, changeFrequency: 'monthly', priority: 0.4 },
   ];
 
   try {

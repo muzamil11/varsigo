@@ -40,7 +40,7 @@ export function FaqAccordion() {
           Frequently Asked Questions
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-muted dark:text-muted-dark">
-          Quick answers about admissions, exams, academic documents, fees, and Varsigo account
+          Quick answers about admissions, exams, academic documents, fees, and NEDHub account
           behavior.
         </p>
       </div>

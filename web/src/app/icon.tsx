@@ -5,7 +5,7 @@ export const contentType = 'image/png';
 
 // Same graduation-cap mark used in the site header (src/components/Header.tsx),
 // on the accent-purple rounded square — replaces the default Next.js/Vercel
-// favicon with the actual Varsigo logo.
+// favicon with the actual NEDHub logo.
 export default function Icon() {
   return new ImageResponse(
     (

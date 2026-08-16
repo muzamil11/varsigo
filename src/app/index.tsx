@@ -34,7 +34,7 @@ export default function SplashScreen() {
         <Ionicons name="school" size={40} color="#FFFFFF" />
       </View>
       <Text className="mt-6 text-4xl font-extrabold text-foreground dark:text-foreground-dark">
-        Varsigo
+        NEDHub
       </Text>
       <Text className="mt-2 text-base text-muted dark:text-muted-dark">
         NED University&apos;s Student Platform

@@ -17,6 +17,7 @@ const SECTIONS = [
   { href: '/admin/teachers/courses', label: 'Courses' },
   { href: '/admin/teachers/list', label: 'Teachers' },
   { href: '/admin/community', label: 'Community' },
+  { href: '/admin/links', label: 'Links' },
 ];
 
 /** Admin gate is the same client-side email check the mobile app's Admin

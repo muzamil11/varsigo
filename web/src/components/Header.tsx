@@ -62,7 +62,7 @@ export function Header() {
             <GraduationCap size={18} color="#FFFFFF" />
           </span>
           <span className="text-lg font-bold text-foreground dark:text-foreground-dark">
-            Varsigo
+            NEDHub
           </span>
         </Link>
 

@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# Varsigo
+# NEDHub
 
 Mobile app for Pakistani university students (starting with NED University, Karachi).
 MVP features: **Teacher Reviews**, **Past Papers & Notes**, **University FAQ**.

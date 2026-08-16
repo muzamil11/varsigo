@@ -20,7 +20,7 @@ export function Footer() {
             <GraduationCap size={16} color="#FFFFFF" />
           </span>
           <span className="text-sm font-semibold text-foreground dark:text-foreground-dark">
-            Varsigo
+            NEDHub
           </span>
           <span className="text-sm text-muted dark:text-muted-dark">
             — an independent, student-run platform for NED University.
@@ -40,7 +40,7 @@ export function Footer() {
         </nav>
       </div>
       <p className="border-t border-line px-4 py-4 text-center text-xs text-muted dark:border-line-dark dark:text-muted-dark">
-        © {new Date().getFullYear()} Varsigo. Not officially affiliated with NED University.
+        © {new Date().getFullYear()} NEDHub. Not officially affiliated with NED University.
       </p>
     </footer>
   );

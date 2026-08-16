@@ -35,7 +35,7 @@ function PrivacyNoticePageContent() {
           Privacy Notice
         </h1>
         <p className="mt-4 text-base leading-6 text-muted dark:text-muted-dark">
-          Varsigo stores your email and name to personalize your experience. Your reviews can be
+          NEDHub stores your email and name to personalize your experience. Your reviews can be
           posted anonymously. We never sell your data. Files you upload are shared with all NED
           students.
         </p>

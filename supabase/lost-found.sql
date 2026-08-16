@@ -1,4 +1,4 @@
--- Varsigo Lost & Found
+-- NEDHub Lost & Found
 -- Run this once in the live Supabase SQL editor before using Lost & Found.
 -- Public clients do not get direct read/write policies; the app uses
 -- community-action/admin-action after Firebase token verification.
