@@ -17,6 +17,20 @@ function sanitizeText(input: unknown): string {
   return String(input ?? '').trim().replace(/<[^>]*>/g, '');
 }
 
+/** Reads the admin-configurable moderation_settings singleton — see
+ *  Admin > Settings and supabase/schema.sql. Defaults to "requires
+ *  approval" (the safe option) if the row can't be read, so a settings
+ *  outage never causes unmoderated content to silently auto-publish. */
+async function requiresApproval(supabase: SupabaseClient, column: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('moderation_settings')
+    .select(column)
+    .eq('id', true)
+    .single();
+  if (error || !data) return true;
+  return Boolean((data as unknown as Record<string, unknown>)[column]);
+}
+
 function normalizeComment(comment: string): string {
   return comment
     .toLowerCase()
@@ -166,6 +180,8 @@ Deno.serve(async (req) => {
         throw new Error('You already submitted a very similar review for this teacher recently.');
       }
 
+      const reviewsRequireApproval = await requiresApproval(supabase, 'reviews_require_approval');
+
       const reviewPayload: Record<string, unknown> = {
         teacher_id: teacherId,
         user_id: userId,
@@ -177,7 +193,7 @@ Deno.serve(async (req) => {
         quality_flags: quality.flags,
         moderation_priority: quality.priority,
         review_fingerprint: quality.fingerprint,
-        approved: false,
+        approved: !reviewsRequireApproval,
       };
       if (courseId) reviewPayload.course_id = courseId;
 

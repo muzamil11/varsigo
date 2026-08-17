@@ -15,6 +15,20 @@ function sanitizeText(input: unknown): string {
   return String(input ?? '').trim().replace(/<[^>]*>/g, '');
 }
 
+/** Reads the admin-configurable moderation_settings singleton — see
+ *  Admin > Settings and supabase/schema.sql. Defaults to "requires
+ *  approval" (the safe option) if the row can't be read, so a settings
+ *  outage never causes unmoderated content to silently auto-publish. */
+async function requiresApproval(supabase: SupabaseClient, column: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('moderation_settings')
+    .select(column)
+    .eq('id', true)
+    .single();
+  if (error || !data) return true;
+  return Boolean((data as unknown as Record<string, unknown>)[column]);
+}
+
 function analyzeQuality(input: string): { flags: string[]; priority: number } {
   const normalized = input
     .toLowerCase()
@@ -255,11 +269,15 @@ Deno.serve(async (req) => {
         throw new Error('This teacher has already been suggested for that department.');
       }
 
+      const teacherSuggestionsRequireApproval = await requiresApproval(
+        supabase,
+        'teacher_suggestions_require_approval',
+      );
       const { error } = await supabase.from('teacher_suggestions').insert({
         name,
         department_id: departmentId,
         suggested_by: userId,
-        approved: false,
+        approved: !teacherSuggestionsRequireApproval,
       });
       if (error) throw error;
 
@@ -331,6 +349,7 @@ Deno.serve(async (req) => {
         throw new Error('Invalid uploaded file URL.');
       }
 
+      const uploadsRequireApproval = await requiresApproval(supabase, 'uploads_require_approval');
       const { error } = await supabase.from('uploads').insert({
         user_id: userId,
         title,
@@ -340,7 +359,7 @@ Deno.serve(async (req) => {
         type: kind,
         file_url: fileUrl,
         file_urls: fileUrls,
-        approved: false,
+        approved: !uploadsRequireApproval,
       });
       if (error) throw error;
 
