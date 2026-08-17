@@ -11,6 +11,7 @@ export interface AdminReview {
   teachingScore: number;
   gradingScore: number;
   attendanceScore: number;
+  helpfulnessScore: number;
   comment: string | null;
   qualityFlags: string[];
   moderationPriority: number;

@@ -139,6 +139,7 @@ Deno.serve(async (req) => {
       const teachingScore = assertScore(payload.teachingScore, 'Teaching score');
       const gradingScore = assertScore(payload.gradingScore, 'Grading score');
       const attendanceScore = assertScore(payload.attendanceScore, 'Attendance score');
+      const helpfulnessScore = assertScore(payload.helpfulnessScore, 'Helpfulness score');
 
       if (courseId) {
         const { data: teacherCourse, error: teacherCourseError } = await supabase
@@ -188,6 +189,7 @@ Deno.serve(async (req) => {
         teaching_score: teachingScore,
         grading_score: gradingScore,
         attendance_score: attendanceScore,
+        helpfulness_score: helpfulnessScore,
         comment,
         is_anonymous: Boolean(payload.isAnonymous),
         quality_flags: quality.flags,

@@ -20,11 +20,12 @@ export interface TeacherReview {
   teaching: number;
   grading: number;
   attendance: number;
+  helpfulness: number;
   createdAt: string;
 }
 
 export interface TeacherDetail extends TeacherListItem {
-  breakdown: { teaching: number; grading: number; attendance: number } | null;
+  breakdown: { teaching: number; grading: number; attendance: number; helpfulness: number } | null;
   reviews: TeacherReview[];
   /** This viewer's own reviews for this teacher that are still awaiting
    *  moderator approval — empty when logged out or once approved. */

@@ -104,7 +104,8 @@ export default function AdminReviewsPage() {
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted dark:text-muted-dark">
             <span>Teaching {review.teachingScore}/5</span>
             <span>Grading {review.gradingScore}/5</span>
-            <span>Attendance {review.attendanceScore}/5</span>
+            <span>Attendance leniency {review.attendanceScore}/5</span>
+            <span>Helpfulness {review.helpfulnessScore}/5</span>
             {review.qualityFlags.length > 0 && (
               <span className="flex items-center gap-1 text-amber-500">
                 <Flag size={12} /> {review.qualityFlags.join(', ')}

@@ -33,6 +33,8 @@ interface RawReviewAggRow {
   teaching_score: number;
   grading_score: number;
   attendance_score: number;
+  // Nullable — reviews submitted before this column existed have no value.
+  helpfulness_score: number | null;
 }
 
 interface RawReviewDetailRow {
@@ -40,6 +42,8 @@ interface RawReviewDetailRow {
   teaching_score: number;
   grading_score: number;
   attendance_score: number;
+  // Nullable — reviews submitted before this column existed have no value.
+  helpfulness_score: number | null;
   comment: string | null;
   is_anonymous: boolean;
   created_at: string;
@@ -63,8 +67,20 @@ function average(nums: number[]): number | null {
   return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10;
 }
 
-function overallOf(r: { teaching_score: number; grading_score: number; attendance_score: number }): number {
-  return (r.teaching_score + r.grading_score + r.attendance_score) / 3;
+/** Averages whichever scores are actually present — reviews submitted
+ *  before the helpfulness_score column existed have `null` there, and
+ *  should average over their original 3 scores rather than treating the
+ *  missing score as a 0 (which would silently deflate their rating). */
+function overallOf(r: {
+  teaching_score: number;
+  grading_score: number;
+  attendance_score: number;
+  helpfulness_score: number | null;
+}): number {
+  const scores = [r.teaching_score, r.grading_score, r.attendance_score, r.helpfulness_score].filter(
+    (score): score is number => score !== null,
+  );
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
 }
 
 function isMissingSchemaError(error: unknown): boolean {
@@ -127,7 +143,7 @@ async function fetchReviewRows(
   let query = supabase
     .from('reviews')
     .select(
-      'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, users(name, email), courses(id, code, name)',
+      'id, teaching_score, grading_score, attendance_score, helpfulness_score, comment, is_anonymous, created_at, users(name, email), courses(id, code, name)',
     )
     .eq('teacher_id', teacherId)
     .eq('approved', filters.approved)
@@ -141,7 +157,7 @@ async function fetchReviewRows(
   let fallbackQuery = supabase
     .from('reviews')
     .select(
-      'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, users(name, email)',
+      'id, teaching_score, grading_score, attendance_score, helpfulness_score, comment, is_anonymous, created_at, users(name, email)',
     )
     .eq('teacher_id', teacherId)
     .eq('approved', filters.approved)
@@ -169,6 +185,8 @@ function toTeacherReview(r: RawReviewDetailRow): TeacherReview {
     teaching: r.teaching_score,
     grading: r.grading_score,
     attendance: r.attendance_score,
+    // 0 for pre-helpfulness-column reviews — see RawReviewDetailRow comment.
+    helpfulness: r.helpfulness_score ?? 0,
     createdAt: new Date(r.created_at).toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
@@ -209,7 +227,7 @@ export async function fetchTeachers(departmentId?: string, courseId?: string): P
 
     const { data: reviewRows, error: reviewError } = await supabase
       .from('reviews')
-      .select('teacher_id, teaching_score, grading_score, attendance_score')
+      .select('teacher_id, teaching_score, grading_score, attendance_score, helpfulness_score')
       .eq('approved', true)
       .in('teacher_id', scopedTeachers.map((t) => t.id));
     if (reviewError) throw reviewError;
@@ -275,6 +293,7 @@ export async function fetchTeacherById(id: string, currentUserId?: string): Prom
             teaching: average(reviews.map((r) => r.teaching)) ?? 0,
             grading: average(reviews.map((r) => r.grading)) ?? 0,
             attendance: average(reviews.map((r) => r.attendance)) ?? 0,
+            helpfulness: average(reviews.map((r) => r.helpfulness)) ?? 0,
           }
         : null,
       reviews,
@@ -291,6 +310,8 @@ interface RawRecentReviewRow {
   teaching_score: number;
   grading_score: number;
   attendance_score: number;
+  // Nullable — reviews submitted before this column existed have no value.
+  helpfulness_score: number | null;
   comment: string | null;
   is_anonymous: boolean;
   created_at: string;
@@ -306,7 +327,7 @@ export async function fetchRecentReviews(limit = 3): Promise<RecentReview[]> {
     const { data, error } = await supabase
       .from('reviews')
       .select(
-        'id, teacher_id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, teachers(name), users(name, email)',
+        'id, teacher_id, teaching_score, grading_score, attendance_score, helpfulness_score, comment, is_anonymous, created_at, teachers(name), users(name, email)',
       )
       .eq('approved', true)
       .not('comment', 'is', null)
@@ -326,7 +347,7 @@ export async function fetchRecentReviews(limit = 3): Promise<RecentReview[]> {
         teacherId: r.teacher_id,
         teacherName: r.teachers?.name ?? 'A teacher',
         comment: (r.comment ?? '').trim(),
-        rating: Math.round(((r.teaching_score + r.grading_score + r.attendance_score) / 3) * 10) / 10,
+        rating: Math.round(overallOf(r) * 10) / 10,
         createdAt: formatDate(r.created_at),
       }));
   } catch (error) {
@@ -341,6 +362,7 @@ export interface SubmitReviewInput {
   teachingScore: number;
   gradingScore: number;
   attendanceScore: number;
+  helpfulnessScore: number;
   comment: string;
   isAnonymous: boolean;
 }
@@ -356,6 +378,7 @@ export async function submitReview(input: SubmitReviewInput): Promise<void> {
       teachingScore: input.teachingScore,
       gradingScore: input.gradingScore,
       attendanceScore: input.attendanceScore,
+      helpfulnessScore: input.helpfulnessScore,
       comment: input.comment,
       isAnonymous: input.isAnonymous,
     });
@@ -402,6 +425,7 @@ export async function submitReview(input: SubmitReviewInput): Promise<void> {
       teaching_score: input.teachingScore,
       grading_score: input.gradingScore,
       attendance_score: input.attendanceScore,
+      helpfulness_score: input.helpfulnessScore,
       comment: cleanComment,
       is_anonymous: input.isAnonymous,
       quality_flags: quality.flags,

@@ -84,6 +84,7 @@ create table if not exists reviews (
   grading_score int check (grading_score between 1 and 5),
   attendance_score int check (attendance_score between 1 and 5),
   teaching_score int check (teaching_score between 1 and 5),
+  helpfulness_score int check (helpfulness_score between 1 and 5),
   comment text,
   is_anonymous boolean default true,
   approved boolean default false,
@@ -104,6 +105,7 @@ alter table reviews add column if not exists quality_flags text[] default '{}';
 alter table reviews add column if not exists moderation_priority int default 0;
 alter table reviews add column if not exists review_fingerprint text;
 alter table reviews add column if not exists course_id uuid;
+alter table reviews add column if not exists helpfulness_score int check (helpfulness_score between 1 and 5);
 alter table reviews drop constraint if exists reviews_course_id_fkey;
 alter table reviews
   add constraint reviews_course_id_fkey

@@ -13,7 +13,7 @@ import { fetchTeacherById, reportReview } from './api';
 function RatingBar({ label, value }: { label: string; value: number }) {
   return (
     <div className="mb-2 flex items-center gap-3">
-      <span className="w-24 shrink-0 text-sm text-muted dark:text-muted-dark">{label}</span>
+      <span className="w-36 shrink-0 text-sm text-muted dark:text-muted-dark">{label}</span>
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-line dark:bg-line-dark">
         <div className="h-full rounded-full bg-accent" style={{ width: `${(value / 5) * 100}%` }} />
       </div>
@@ -139,7 +139,8 @@ export function ReviewsSection({ teacherId }: { teacherId: string }) {
         <div className="mb-6 rounded-2xl border border-line bg-card p-4 dark:border-line-dark dark:bg-card-dark">
           <RatingBar label="Teaching" value={detail.breakdown.teaching} />
           <RatingBar label="Grading" value={detail.breakdown.grading} />
-          <RatingBar label="Attendance" value={detail.breakdown.attendance} />
+          <RatingBar label="Attendance leniency" value={detail.breakdown.attendance} />
+          <RatingBar label="Helpfulness" value={detail.breakdown.helpfulness} />
         </div>
       )}
 
@@ -161,7 +162,8 @@ export function ReviewsSection({ teacherId }: { teacherId: string }) {
           <div className="mt-3 flex gap-4 text-xs text-muted dark:text-muted-dark">
             <span>Teaching {review.teaching}/5</span>
             <span>Grading {review.grading}/5</span>
-            <span>Attendance {review.attendance}/5</span>
+            <span>Attendance leniency {review.attendance}/5</span>
+            <span>Helpfulness {review.helpfulness}/5</span>
           </div>
           <p className="mt-3 text-xs text-muted dark:text-muted-dark">
             Only visible to you until a moderator approves it.
@@ -216,7 +218,8 @@ export function ReviewsSection({ teacherId }: { teacherId: string }) {
             <div className="mt-3 flex gap-4 text-xs text-muted dark:text-muted-dark">
               <span>Teaching {review.teaching}/5</span>
               <span>Grading {review.grading}/5</span>
-              <span>Attendance {review.attendance}/5</span>
+              <span>Attendance leniency {review.attendance}/5</span>
+              <span>Helpfulness {review.helpfulness}/5</span>
             </div>
           </div>
         ))

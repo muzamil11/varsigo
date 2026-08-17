@@ -12,10 +12,14 @@ import { useAuthStore } from '@/store/authStore';
 
 function ScoreSelector({
   label,
+  low,
+  high,
   value,
   onChange,
 }: {
   label: string;
+  low: string;
+  high: string;
   value: number;
   onChange: (v: number) => void;
 }) {
@@ -38,6 +42,10 @@ function ScoreSelector({
           </button>
         ))}
       </div>
+      <div className="mt-1 flex justify-between text-xs text-muted dark:text-muted-dark">
+        <span>1 · {low}</span>
+        <span>5 · {high}</span>
+      </div>
     </div>
   );
 }
@@ -57,6 +65,7 @@ export default function AddReviewPage() {
   const [teaching, setTeaching] = useState(0);
   const [grading, setGrading] = useState(0);
   const [attendance, setAttendance] = useState(0);
+  const [helpfulness, setHelpfulness] = useState(0);
   const [comment, setComment] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -74,6 +83,7 @@ export default function AddReviewPage() {
     teaching > 0 &&
     grading > 0 &&
     attendance > 0 &&
+    helpfulness > 0 &&
     trimmedComment.length >= MIN_COMMENT_LENGTH &&
     !submitting;
 
@@ -89,6 +99,7 @@ export default function AddReviewPage() {
         teachingScore: teaching,
         gradingScore: grading,
         attendanceScore: attendance,
+        helpfulnessScore: helpfulness,
         comment: trimmedComment,
         isAnonymous,
       });
@@ -137,9 +148,34 @@ export default function AddReviewPage() {
           Your review is moderated before it appears publicly.
         </p>
 
-        <ScoreSelector label="Teaching quality" value={teaching} onChange={setTeaching} />
-        <ScoreSelector label="Grading fairness" value={grading} onChange={setGrading} />
-        <ScoreSelector label="Attendance strictness" value={attendance} onChange={setAttendance} />
+        <ScoreSelector
+          label="Teaching quality"
+          low="Poor"
+          high="Excellent"
+          value={teaching}
+          onChange={setTeaching}
+        />
+        <ScoreSelector
+          label="Grading fairness"
+          low="Unfair"
+          high="Very fair"
+          value={grading}
+          onChange={setGrading}
+        />
+        <ScoreSelector
+          label="Attendance leniency"
+          low="Very strict"
+          high="Very lenient"
+          value={attendance}
+          onChange={setAttendance}
+        />
+        <ScoreSelector
+          label="Helpfulness"
+          low="Not approachable"
+          high="Very approachable"
+          value={helpfulness}
+          onChange={setHelpfulness}
+        />
 
         {teacher && teacher.courses.length > 0 && (
           <div className="mb-5">

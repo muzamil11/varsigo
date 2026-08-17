@@ -44,6 +44,7 @@ interface RawPendingReviewRow {
   teaching_score: number;
   grading_score: number;
   attendance_score: number;
+  helpfulness_score: number;
   comment: string | null;
   quality_flags: string[] | null;
   moderation_priority: number | null;
@@ -65,7 +66,7 @@ export async function fetchPendingReviews(adminEmail: string): Promise<AdminRevi
     const primary = await supabase
       .from('reviews')
       .select(
-        'id, teaching_score, grading_score, attendance_score, comment, quality_flags, moderation_priority, reported, is_anonymous, created_at, teachers(name), courses(code, name), users(email)',
+        'id, teaching_score, grading_score, attendance_score, helpfulness_score, comment, quality_flags, moderation_priority, reported, is_anonymous, created_at, teachers(name), courses(code, name), users(email)',
       )
       .eq('approved', false)
       .order('reported', { ascending: false })
@@ -77,7 +78,7 @@ export async function fetchPendingReviews(adminEmail: string): Promise<AdminRevi
       const fallback = await supabase
         .from('reviews')
         .select(
-          'id, teaching_score, grading_score, attendance_score, comment, is_anonymous, created_at, teachers(name), users(email)',
+          'id, teaching_score, grading_score, attendance_score, helpfulness_score, comment, is_anonymous, created_at, teachers(name), users(email)',
         )
         .eq('approved', false)
         .order('created_at', { ascending: false });
@@ -93,6 +94,7 @@ export async function fetchPendingReviews(adminEmail: string): Promise<AdminRevi
       teachingScore: r.teaching_score,
       gradingScore: r.grading_score,
       attendanceScore: r.attendance_score,
+      helpfulnessScore: r.helpfulness_score,
       comment: r.comment,
       qualityFlags: r.quality_flags ?? [],
       moderationPriority: r.moderation_priority ?? 0,

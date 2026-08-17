@@ -29,8 +29,8 @@ export function AdminReviewCard({
         <Text className="mt-1 text-xs font-medium text-accent">{review.courseName}</Text>
       )}
       <Text className="mt-1 text-xs text-muted dark:text-muted-dark">
-        Teaching {review.teachingScore} · Grading {review.gradingScore} · Attendance{' '}
-        {review.attendanceScore}
+        Teaching {review.teachingScore} · Grading {review.gradingScore} · Attendance leniency{' '}
+        {review.attendanceScore} · Helpfulness {review.helpfulnessScore}
       </Text>
       {review.comment && (
         <Text className="mt-2 text-sm text-foreground dark:text-foreground-dark">

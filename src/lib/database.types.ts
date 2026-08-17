@@ -58,6 +58,7 @@ export interface ReviewRow {
   grading_score: number;
   attendance_score: number;
   teaching_score: number;
+  helpfulness_score: number;
   comment: string | null;
   is_anonymous: boolean;
   approved: boolean;

@@ -166,7 +166,8 @@ export default function TeacherDetailScreen() {
             </Text>
             <RatingBar label="Teaching" value={teacher.breakdown.teaching} />
             <RatingBar label="Grading" value={teacher.breakdown.grading} />
-            <RatingBar label="Attendance" value={teacher.breakdown.attendance} />
+            <RatingBar label="Attendance leniency" value={teacher.breakdown.attendance} />
+            <RatingBar label="Helpfulness" value={teacher.breakdown.helpfulness} />
           </Card>
         )}
 
@@ -211,7 +212,7 @@ export default function TeacherDetailScreen() {
             <View className="mt-2 flex-row items-center">
               <Ionicons name="star" size={13} color="#6366F1" />
               <Text className="ml-1 text-sm font-medium text-accent">
-                {((review.teaching + review.grading + review.attendance) / 3).toFixed(1)}
+                {((review.teaching + review.grading + review.attendance + review.helpfulness) / 4).toFixed(1)}
               </Text>
             </View>
             {review.comment && (
@@ -260,7 +261,7 @@ export default function TeacherDetailScreen() {
                   <View className="mt-1 flex-row items-center">
                     <Ionicons name="star" size={13} color="#6366F1" />
                     <Text className="ml-1 text-sm font-medium text-accent">
-                      {((review.teaching + review.grading + review.attendance) / 3).toFixed(1)}
+                      {((review.teaching + review.grading + review.attendance + review.helpfulness) / 4).toFixed(1)}
                     </Text>
                   </View>
                   {review.course && (

@@ -12,10 +12,14 @@ import { useThemeColors } from '@/store/themeStore';
 
 function RatingSlider({
   label,
+  low,
+  high,
   value,
   onChange,
 }: {
   label: string;
+  low: string;
+  high: string;
   value: number;
   onChange: (v: number) => void;
 }) {
@@ -38,6 +42,10 @@ function RatingSlider({
         maximumTrackTintColor={colors.border}
         thumbTintColor={colors.accent}
       />
+      <View className="flex-row justify-between">
+        <Text className="text-xs text-muted dark:text-muted-dark">1 · {low}</Text>
+        <Text className="text-xs text-muted dark:text-muted-dark">5 · {high}</Text>
+      </View>
     </View>
   );
 }
@@ -55,6 +63,7 @@ export default function AddReviewScreen() {
   const [teaching, setTeaching] = useState(3);
   const [grading, setGrading] = useState(3);
   const [attendance, setAttendance] = useState(3);
+  const [helpfulness, setHelpfulness] = useState(3);
   const [comment, setComment] = useState('');
   const [anonymous, setAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -107,6 +116,7 @@ export default function AddReviewScreen() {
         teachingScore: teaching,
         gradingScore: grading,
         attendanceScore: attendance,
+        helpfulnessScore: helpfulness,
         comment: comment.trim(),
         isAnonymous: anonymous,
       });
@@ -146,9 +156,34 @@ export default function AddReviewScreen() {
           <Text className="mb-4 text-base font-semibold text-foreground dark:text-foreground-dark">
             Rate your experience
           </Text>
-          <RatingSlider label="Teaching" value={teaching} onChange={setTeaching} />
-          <RatingSlider label="Grading" value={grading} onChange={setGrading} />
-          <RatingSlider label="Attendance" value={attendance} onChange={setAttendance} />
+          <RatingSlider
+            label="Teaching"
+            low="Poor"
+            high="Excellent"
+            value={teaching}
+            onChange={setTeaching}
+          />
+          <RatingSlider
+            label="Grading"
+            low="Unfair"
+            high="Very fair"
+            value={grading}
+            onChange={setGrading}
+          />
+          <RatingSlider
+            label="Attendance leniency"
+            low="Very strict"
+            high="Very lenient"
+            value={attendance}
+            onChange={setAttendance}
+          />
+          <RatingSlider
+            label="Helpfulness"
+            low="Not approachable"
+            high="Very approachable"
+            value={helpfulness}
+            onChange={setHelpfulness}
+          />
         </Card>
 
         {courses.length > 0 && (
