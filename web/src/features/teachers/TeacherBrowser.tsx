@@ -7,6 +7,15 @@ import React, { useMemo, useState } from 'react';
 import { AnimatedListItem, Card, Chip, PageShell, SearchBar, StateMessage } from '@/components';
 import { formatCourse } from '@/features/courses/types';
 import type { Department } from '@/features/departments/types';
+import {
+  MIN_REVIEWS_FOR_QUALITY_TAG,
+  TEACHER_QUALITY_TAGS,
+  TEACHER_QUALITY_THRESHOLD,
+  type TeacherBreakdown,
+  type TeacherQualityKey,
+} from './data';
+
+const MAX_QUALITY_TAGS_SHOWN = 2;
 
 export interface PublicTeacherListItem {
   id: string;
@@ -16,6 +25,7 @@ export interface PublicTeacherListItem {
   verificationStatus: 'admin_verified' | 'suggestion_approved' | 'unverified';
   rating: number | null;
   reviewCount: number;
+  breakdown: TeacherBreakdown | null;
 }
 
 interface TeacherBrowserProps {
@@ -42,6 +52,7 @@ function matchesSearch(text: string | null | undefined, query: string): boolean 
 export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserProps) {
   const [search, setSearch] = useState('');
   const [departmentId, setDepartmentId] = useState<string | null>(null);
+  const [qualityFilters, setQualityFilters] = useState<Set<TeacherQualityKey>>(new Set());
 
   const filtered = useMemo(() => {
     const q = normalizeSearchValue(search);
@@ -50,14 +61,34 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
         const dept = departments.find((d) => d.id === departmentId);
         if (dept && t.department !== dept.name) return false;
       }
-      if (!q) return true;
-      return (
-        matchesSearch(t.name, q) ||
-        matchesSearch(t.department, q) ||
-        t.courses.some((c) => matchesSearch(c.name, q) || matchesSearch(c.code, q) || matchesSearch(formatCourse(c), q))
-      );
+      if (q) {
+        const matchesText =
+          matchesSearch(t.name, q) ||
+          matchesSearch(t.department, q) ||
+          t.courses.some((c) => matchesSearch(c.name, q) || matchesSearch(c.code, q) || matchesSearch(formatCourse(c), q));
+        if (!matchesText) return false;
+      }
+      if (qualityFilters.size > 0) {
+        if (!t.breakdown || t.reviewCount < MIN_REVIEWS_FOR_QUALITY_TAG) return false;
+        for (const key of qualityFilters) {
+          if (t.breakdown[key] < TEACHER_QUALITY_THRESHOLD) return false;
+        }
+      }
+      return true;
     });
-  }, [teachers, search, departmentId, departments]);
+  }, [teachers, search, departmentId, departments, qualityFilters]);
+
+  const toggleQualityFilter = (key: TeacherQualityKey) => {
+    setQualityFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
 
   return (
     <PageShell className="py-10">
@@ -84,6 +115,26 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
         ))}
       </div>
 
+      <div className="mt-2 flex flex-wrap items-center gap-y-2">
+        {TEACHER_QUALITY_TAGS.map((tag) => (
+          <Chip
+            key={tag.key}
+            label={tag.label}
+            selected={qualityFilters.has(tag.key)}
+            onPress={() => toggleQualityFilter(tag.key)}
+          />
+        ))}
+        {qualityFilters.size > 0 && (
+          <button
+            type="button"
+            onClick={() => setQualityFilters(new Set())}
+            className="mb-2 mr-2 text-xs font-medium text-accent underline"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
       <div className="mt-6">
         {error ? (
           <StateMessage icon={AlertTriangle} title="Couldn't load teachers" subtitle={error} />
@@ -91,11 +142,20 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
           <StateMessage
             icon={SearchIcon}
             title="No teachers found"
-            subtitle="Try a different search or filter."
+            subtitle="Try a different search, department, or quality filter."
           />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            {filtered.map((teacher, index) => (
+            {filtered.map((teacher, index) => {
+              const qualityTags =
+                teacher.breakdown && teacher.reviewCount >= MIN_REVIEWS_FOR_QUALITY_TAG
+                  ? TEACHER_QUALITY_TAGS.filter(
+                      (tag) => teacher.breakdown![tag.key] >= TEACHER_QUALITY_THRESHOLD,
+                    )
+                      .sort((a, b) => teacher.breakdown![b.key] - teacher.breakdown![a.key])
+                      .slice(0, MAX_QUALITY_TAGS_SHOWN)
+                  : [];
+              return (
               <AnimatedListItem key={teacher.id} index={index}>
                 <Link href={`/teachers/${teacher.id}`} className="block h-full">
                   <Card className="h-full">
@@ -134,10 +194,23 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
                         {teacher.courses.map(formatCourse).join(', ')}
                       </p>
                     )}
+                    {qualityTags.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {qualityTags.map((tag) => (
+                          <span
+                            key={tag.key}
+                            className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent"
+                          >
+                            {tag.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </Card>
                 </Link>
               </AnimatedListItem>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

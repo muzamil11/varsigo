@@ -233,23 +233,34 @@ export async function fetchTeachers(departmentId?: string, courseId?: string): P
     if (reviewError) throw reviewError;
 
     const coursesByTeacher = await fetchCourseMapForTeachers(scopedTeachers.map((t) => t.id));
-    const scoresByTeacher = new Map<string, number[]>();
+    const reviewsByTeacher = new Map<string, RawReviewAggRow[]>();
     for (const r of (reviewRows ?? []) as RawReviewAggRow[]) {
-      const list = scoresByTeacher.get(r.teacher_id) ?? [];
-      list.push(overallOf(r));
-      scoresByTeacher.set(r.teacher_id, list);
+      const list = reviewsByTeacher.get(r.teacher_id) ?? [];
+      list.push(r);
+      reviewsByTeacher.set(r.teacher_id, list);
     }
 
     return scopedTeachers.map((t) => {
-      const scores = scoresByTeacher.get(t.id) ?? [];
+      const rows = reviewsByTeacher.get(t.id) ?? [];
       return {
         id: t.id,
         name: t.name,
         department: t.departments?.name ?? null,
         courses: coursesByTeacher.get(t.id) ?? [],
         verificationStatus: t.verification_status ?? 'unverified',
-        rating: average(scores),
-        reviewCount: scores.length,
+        rating: average(rows.map(overallOf)),
+        reviewCount: rows.length,
+        // Per-dimension averages so the Teachers page can filter on "fair
+        // grading" / "lenient attendance" without a per-teacher fetch.
+        breakdown: rows.length
+          ? {
+              teaching: average(rows.map((r) => r.teaching_score)) ?? 0,
+              grading: average(rows.map((r) => r.grading_score)) ?? 0,
+              attendance: average(rows.map((r) => r.attendance_score)) ?? 0,
+              helpfulness:
+                average(rows.map((r) => r.helpfulness_score).filter((s): s is number => s !== null)) ?? 0,
+            }
+          : null,
       };
     });
   } catch (error) {

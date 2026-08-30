@@ -3,7 +3,14 @@ import { Text, View } from 'react-native';
 
 import { Card } from '@/components';
 import { formatCourse } from '@/features/courses/types';
-import type { TeacherListItem } from './data';
+import {
+  MIN_REVIEWS_FOR_QUALITY_TAG,
+  TEACHER_QUALITY_TAGS,
+  TEACHER_QUALITY_THRESHOLD,
+  type TeacherListItem,
+} from './data';
+
+const MAX_QUALITY_TAGS_SHOWN = 2;
 
 function verificationLabel(status: TeacherListItem['verificationStatus']): string {
   switch (status) {
@@ -29,6 +36,13 @@ export function TeacherCard({
     .slice(-2)
     .map((w) => w[0])
     .join('');
+
+  const qualityTags =
+    teacher.breakdown && teacher.reviewCount >= MIN_REVIEWS_FOR_QUALITY_TAG
+      ? TEACHER_QUALITY_TAGS.filter((tag) => teacher.breakdown![tag.key] >= TEACHER_QUALITY_THRESHOLD)
+          .sort((a, b) => teacher.breakdown![b.key] - teacher.breakdown![a.key])
+          .slice(0, MAX_QUALITY_TAGS_SHOWN)
+      : [];
 
   return (
     <Card onPress={onPress} className="mb-3 flex-row items-center">
@@ -58,6 +72,15 @@ export function TeacherCard({
           >
             {teacher.courses.map(formatCourse).join(', ')}
           </Text>
+        )}
+        {qualityTags.length > 0 && (
+          <View className="mt-1.5 flex-row flex-wrap">
+            {qualityTags.map((tag) => (
+              <View key={tag.key} className="mb-1 mr-1.5 rounded-full bg-accent/10 px-2 py-0.5">
+                <Text className="text-[10px] font-semibold text-accent">{tag.label}</Text>
+              </View>
+            ))}
+          </View>
         )}
       </View>
       {teacher.rating !== null ? (

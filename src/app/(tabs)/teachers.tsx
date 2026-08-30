@@ -31,7 +31,13 @@ import type { Course } from '@/features/courses/types';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
 import { fetchTeachers, suggestTeacher } from '@/features/teachers/api';
-import type { TeacherListItem } from '@/features/teachers/data';
+import {
+  MIN_REVIEWS_FOR_QUALITY_TAG,
+  TEACHER_QUALITY_TAGS,
+  TEACHER_QUALITY_THRESHOLD,
+  type TeacherListItem,
+  type TeacherQualityKey,
+} from '@/features/teachers/data';
 import { TeacherCard } from '@/features/teachers/TeacherCard';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeColors } from '@/store/themeStore';
@@ -87,6 +93,7 @@ export default function TeachersScreen() {
   const [selectedDept, setSelectedDept] = useState<Department>(ALL_DEPARTMENTS);
   const [selectedCourse, setSelectedCourse] = useState<Course>(ALL_COURSES);
   const [sortBy, setSortBy] = useState<SortOption>('rating');
+  const [qualityFilters, setQualityFilters] = useState<Set<TeacherQualityKey>>(new Set());
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -133,20 +140,40 @@ export default function TeachersScreen() {
   const filtered = useMemo(() => {
     const search = normalizeSearchValue(query);
     const matches = teachers.filter((t) => {
-      if (!search) return true;
-      return (
-        matchesSearch(t.name, search) ||
-        matchesSearch(t.department, search) ||
-        t.courses.some(
-          (course) =>
-            matchesSearch(course.name, search) ||
-            matchesSearch(course.code, search) ||
-            matchesSearch(formatCourse(course), search),
-        )
-      );
+      if (search) {
+        const matchesText =
+          matchesSearch(t.name, search) ||
+          matchesSearch(t.department, search) ||
+          t.courses.some(
+            (course) =>
+              matchesSearch(course.name, search) ||
+              matchesSearch(course.code, search) ||
+              matchesSearch(formatCourse(course), search),
+          );
+        if (!matchesText) return false;
+      }
+      if (qualityFilters.size > 0) {
+        if (!t.breakdown || t.reviewCount < MIN_REVIEWS_FOR_QUALITY_TAG) return false;
+        for (const key of qualityFilters) {
+          if (t.breakdown[key] < TEACHER_QUALITY_THRESHOLD) return false;
+        }
+      }
+      return true;
     });
     return sortTeachers(matches, sortBy);
-  }, [teachers, query, sortBy]);
+  }, [teachers, query, sortBy, qualityFilters]);
+
+  const toggleQualityFilter = (key: TeacherQualityKey) => {
+    setQualityFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
 
   const chips = [ALL_DEPARTMENTS, ...departments];
   const courseChips = [ALL_COURSES, ...courses];
@@ -241,6 +268,27 @@ export default function TeachersScreen() {
         </ScrollView>
       </View>
 
+      <View className="mt-2">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {TEACHER_QUALITY_TAGS.map((filter) => (
+            <Chip
+              key={filter.key}
+              label={filter.label}
+              selected={qualityFilters.has(filter.key)}
+              onPress={() => toggleQualityFilter(filter.key)}
+            />
+          ))}
+          {qualityFilters.size > 0 && (
+            <Chip label="Clear" selected={false} onPress={() => setQualityFilters(new Set())} />
+          )}
+        </ScrollView>
+      </View>
+
       <View className="mt-2 flex-row items-center">
         <Text className="ml-4 mr-2 text-xs text-muted dark:text-muted-dark">Sort by</Text>
         <ScrollView
@@ -289,8 +337,8 @@ export default function TeachersScreen() {
               icon="people-outline"
               title="No teachers found"
               subtitle={
-                query
-                  ? 'Try a different teacher, course, or department filter.'
+                query || qualityFilters.size > 0
+                  ? 'Try a different teacher, course, department, or quality filter.'
                   : 'No teachers have been added for this filter yet.'
               }
             />

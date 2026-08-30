@@ -42,6 +42,7 @@ export default async function TeachersPage() {
     verificationStatus: t.verificationStatus,
     rating: t.rating,
     reviewCount: t.reviewCount,
+    breakdown: t.breakdown,
   }));
 
   return (

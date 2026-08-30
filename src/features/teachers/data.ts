@@ -2,6 +2,13 @@
 // Real data now comes from src/features/teachers/api.ts (Supabase) — see
 // supabase/schema.sql for the underlying tables.
 
+export interface TeacherBreakdown {
+  teaching: number;
+  grading: number;
+  attendance: number;
+  helpfulness: number;
+}
+
 export interface TeacherListItem {
   id: string;
   name: string;
@@ -10,7 +17,29 @@ export interface TeacherListItem {
   verificationStatus: 'admin_verified' | 'suggestion_approved' | 'unverified';
   rating: number | null; // null = no approved reviews yet
   reviewCount: number;
+  /** Per-dimension averages — null with no approved reviews yet. Powers the
+   *  Teachers screen's "Lenient attendance" / "Fair grading" style filters,
+   *  so those don't need a per-teacher fetch to evaluate. */
+  breakdown: TeacherBreakdown | null;
 }
+
+export type TeacherQualityKey = keyof TeacherBreakdown;
+
+/** Powers both the Teachers screen's quality filter chips and the small
+ *  "why this teacher matched" tags on each card — one source of truth for
+ *  the label text so they can't drift apart. */
+export const TEACHER_QUALITY_TAGS: { key: TeacherQualityKey; label: string }[] = [
+  { key: 'attendance', label: 'Lenient attendance' },
+  { key: 'grading', label: 'Fair grading' },
+  { key: 'teaching', label: 'Great teaching' },
+  { key: 'helpfulness', label: 'Approachable' },
+];
+// Reviews average 1-5; 4+ reads as "students consistently say so", not one
+// generous review skewing the picture.
+export const TEACHER_QUALITY_THRESHOLD = 4;
+// Below this, a single review could make a teacher look lenient/fair/etc.
+// by chance — require a bit of a track record before a quality tag applies.
+export const MIN_REVIEWS_FOR_QUALITY_TAG = 2;
 
 export interface TeacherReview {
   id: string;
@@ -25,7 +54,6 @@ export interface TeacherReview {
 }
 
 export interface TeacherDetail extends TeacherListItem {
-  breakdown: { teaching: number; grading: number; attendance: number; helpfulness: number } | null;
   reviews: TeacherReview[];
   /** This viewer's own reviews for this teacher that are still awaiting
    *  moderator approval — empty when logged out or once approved. */
