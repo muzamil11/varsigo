@@ -315,6 +315,14 @@ export async function fetchTeacherById(id: string, currentUserId?: string): Prom
   }
 }
 
+/** Fetches full detail for a handful of teachers at once, in the order
+ *  given — used by the Compare Teachers screen. Each teacher's own review
+ *  data drives that screen, so this is just fetchTeacherById run in
+ *  parallel rather than a bespoke query. */
+export async function fetchTeachersForCompare(ids: string[]): Promise<TeacherDetail[]> {
+  return Promise.all(ids.map((id) => fetchTeacherById(id)));
+}
+
 interface RawRecentReviewRow {
   id: string;
   teacher_id: string;

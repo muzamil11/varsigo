@@ -1,7 +1,9 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, View } from 'react-native';
 
 import { Card } from '@/components';
+import { useThemeColors } from '@/store/themeStore';
 import { formatCourse } from '@/features/courses/types';
 import {
   MIN_REVIEWS_FOR_QUALITY_TAG,
@@ -23,14 +25,22 @@ function verificationLabel(status: TeacherListItem['verificationStatus']): strin
   }
 }
 
-/** Initials avatar + name/dept + rating badge, tappable to open detail. */
+/** Initials avatar + name/dept + rating badge, tappable to open detail.
+ *  When `selectable` is set (Compare Teachers picking flow), a leading
+ *  checkbox replaces the tap-to-open behavior's implicit affordance and
+ *  `onPress` toggles selection instead of navigating. */
 export function TeacherCard({
   teacher,
   onPress,
+  selectable = false,
+  selected = false,
 }: {
   teacher: TeacherListItem;
   onPress: () => void;
+  selectable?: boolean;
+  selected?: boolean;
 }) {
+  const colors = useThemeColors();
   const initials = teacher.name
     .split(' ')
     .slice(-2)
@@ -45,7 +55,18 @@ export function TeacherCard({
       : [];
 
   return (
-    <Card onPress={onPress} className="mb-3 flex-row items-center">
+    <Card
+      onPress={onPress}
+      className={`mb-3 flex-row items-center ${selectable && selected ? 'border-accent' : ''}`}
+    >
+      {selectable && (
+        <Ionicons
+          name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+          size={22}
+          color={selected ? colors.accent : colors.textMuted}
+          style={{ marginRight: 10 }}
+        />
+      )}
       <View className="h-12 w-12 items-center justify-center rounded-full bg-accent/15">
         <Text className="text-base font-semibold text-accent">{initials}</Text>
       </View>

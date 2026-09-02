@@ -53,6 +53,38 @@ export interface TeacherReview {
   createdAt: string;
 }
 
+/** A review's own overall score, averaged only over dimensions it actually
+ *  has. `helpfulness` is 0 (never a real value — the DB check constraint
+ *  requires 1-5) for reviews submitted before that column existed, so 0
+ *  unambiguously means "not rated" and must be excluded rather than dragging
+ *  the average down. */
+export function reviewOverall(review: TeacherReview): number {
+  const scores = [review.teaching, review.grading, review.attendance, review.helpfulness].filter(
+    (score) => score > 0,
+  );
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
+}
+
+export type ReviewSentiment = 'positive' | 'neutral' | 'negative';
+// A review's own star ratings are a more reliable "how good was it" signal
+// than parsing free-text wording (reviews mix English and Roman Urdu slang),
+// so sentiment is derived from reviewOverall() rather than keyword matching.
+export const SENTIMENT_POSITIVE_THRESHOLD = 4;
+export const SENTIMENT_NEGATIVE_THRESHOLD = 2.5;
+
+export function reviewSentiment(overall: number): ReviewSentiment {
+  if (overall >= SENTIMENT_POSITIVE_THRESHOLD) return 'positive';
+  if (overall < SENTIMENT_NEGATIVE_THRESHOLD) return 'negative';
+  return 'neutral';
+}
+
+/** Compare Teachers (src/app/teachers/compare, src/features/teachers/
+ *  CompareTeachers.tsx) lets students pick a handful of teachers to see
+ *  side by side — capped low enough that bars for every teacher still fit
+ *  on one screen without becoming unreadable. */
+export const MIN_COMPARE_TEACHERS = 2;
+export const MAX_COMPARE_TEACHERS = 4;
+
 export interface TeacherDetail extends TeacherListItem {
   reviews: TeacherReview[];
   /** This viewer's own reviews for this teacher that are still awaiting

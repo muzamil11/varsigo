@@ -6,7 +6,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'rea
 import { AnimatedListItem, Button, Card, Screen, StateMessage } from '@/components';
 import { formatCourse } from '@/features/courses/types';
 import { fetchTeacherById, reportReview } from '@/features/teachers/api';
-import type { TeacherDetail } from '@/features/teachers/data';
+import { reviewOverall, type TeacherDetail } from '@/features/teachers/data';
 import { RatingBar } from '@/features/teachers/RatingBar';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeColors } from '@/store/themeStore';
@@ -212,7 +212,7 @@ export default function TeacherDetailScreen() {
             <View className="mt-2 flex-row items-center">
               <Ionicons name="star" size={13} color="#6366F1" />
               <Text className="ml-1 text-sm font-medium text-accent">
-                {((review.teaching + review.grading + review.attendance + review.helpfulness) / 4).toFixed(1)}
+                {reviewOverall(review).toFixed(1)}
               </Text>
             </View>
             {review.comment && (
@@ -261,7 +261,7 @@ export default function TeacherDetailScreen() {
                   <View className="mt-1 flex-row items-center">
                     <Ionicons name="star" size={13} color="#6366F1" />
                     <Text className="ml-1 text-sm font-medium text-accent">
-                      {((review.teaching + review.grading + review.attendance + review.helpfulness) / 4).toFixed(1)}
+                      {reviewOverall(review).toFixed(1)}
                     </Text>
                   </View>
                   {review.course && (

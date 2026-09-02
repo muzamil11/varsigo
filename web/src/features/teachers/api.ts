@@ -268,6 +268,81 @@ export async function fetchTeachers(departmentId?: string, courseId?: string): P
   }
 }
 
+/** Same public aggregate shape as fetchTeachers (rating, reviewCount,
+ *  breakdown — no review text), scoped to a specific set of teacher ids and
+ *  returned in that order. Powers the Compare Teachers page's server-rendered
+ *  numeric sections; the request only ever carries ids the visitor picked
+ *  from the public Teachers list, so no auth check is needed here (mirrors
+ *  fetchTeachers, which the public Teachers page already calls unauthenticated). */
+export async function fetchTeachersByIds(ids: string[]): Promise<TeacherListItem[]> {
+  if (ids.length === 0) return [];
+  try {
+    const { data: teacherRows, error: teacherError } = await supabase
+      .from('teachers')
+      .select('id, name, verification_status, departments(id, name)')
+      .in('id', ids);
+    if (teacherError) throw teacherError;
+
+    const teachers = (teacherRows ?? []) as unknown as RawTeacherRow[];
+    if (teachers.length === 0) return [];
+
+    const { data: reviewRows, error: reviewError } = await supabase
+      .from('reviews')
+      .select('teacher_id, teaching_score, grading_score, attendance_score, helpfulness_score')
+      .eq('approved', true)
+      .in('teacher_id', teachers.map((t) => t.id));
+    if (reviewError) throw reviewError;
+
+    const coursesByTeacher = await fetchCourseMapForTeachers(teachers.map((t) => t.id));
+    const reviewsByTeacher = new Map<string, RawReviewAggRow[]>();
+    for (const r of (reviewRows ?? []) as RawReviewAggRow[]) {
+      const list = reviewsByTeacher.get(r.teacher_id) ?? [];
+      list.push(r);
+      reviewsByTeacher.set(r.teacher_id, list);
+    }
+
+    const byId = new Map(
+      teachers.map((t) => {
+        const rows = reviewsByTeacher.get(t.id) ?? [];
+        const item: TeacherListItem = {
+          id: t.id,
+          name: t.name,
+          department: t.departments?.name ?? null,
+          courses: coursesByTeacher.get(t.id) ?? [],
+          verificationStatus: t.verification_status ?? 'unverified',
+          rating: average(rows.map(overallOf)),
+          reviewCount: rows.length,
+          breakdown: rows.length
+            ? {
+                teaching: average(rows.map((r) => r.teaching_score)) ?? 0,
+                grading: average(rows.map((r) => r.grading_score)) ?? 0,
+                attendance: average(rows.map((r) => r.attendance_score)) ?? 0,
+                helpfulness:
+                  average(rows.map((r) => r.helpfulness_score).filter((s): s is number => s !== null)) ?? 0,
+              }
+            : null,
+        };
+        return [t.id, item];
+      }),
+    );
+
+    // Preserve the order the visitor picked the teachers in (query-string
+    // order), not whatever order Postgres's `.in()` happens to return.
+    return ids.map((id) => byId.get(id)).filter((t): t is TeacherListItem => t !== undefined);
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
+/** Fetches full review detail for a handful of teachers at once, in the
+ *  order given — used by CompareTeachers' "What students are saying"
+ *  section, which (like ReviewsSection) only calls this client-side after
+ *  confirming the visitor is signed in, so review comments never end up in
+ *  a server-rendered payload sent to anonymous visitors/crawlers. */
+export async function fetchTeachersForCompare(ids: string[]): Promise<TeacherDetail[]> {
+  return Promise.all(ids.map((id) => fetchTeacherById(id)));
+}
+
 /** Public-safe subset of fetchTeacherById — name/department/courses only,
  *  no ratings or review text. Used by the public (server-rendered,
  *  indexable) teacher detail page so review content never ends up in the

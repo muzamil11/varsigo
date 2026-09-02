@@ -1,13 +1,16 @@
 'use client';
 
-import { AlertTriangle, BadgeCheck, Search as SearchIcon, Users } from 'lucide-react';
+import { AlertTriangle, BadgeCheck, CheckCircle2, Circle, GitCompare, Search as SearchIcon, Users, X } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 
-import { AnimatedListItem, Card, Chip, PageShell, SearchBar, StateMessage } from '@/components';
+import { AnimatedListItem, APP_CONTAINER_CLASS, Button, Card, Chip, PageShell, SearchBar, StateMessage } from '@/components';
 import { formatCourse } from '@/features/courses/types';
 import type { Department } from '@/features/departments/types';
 import {
+  MAX_COMPARE_TEACHERS,
+  MIN_COMPARE_TEACHERS,
   MIN_REVIEWS_FOR_QUALITY_TAG,
   TEACHER_QUALITY_TAGS,
   TEACHER_QUALITY_THRESHOLD,
@@ -50,9 +53,12 @@ function matchesSearch(text: string | null | undefined, query: string): boolean 
 }
 
 export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserProps) {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [qualityFilters, setQualityFilters] = useState<Set<TeacherQualityKey>>(new Set());
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
 
   const filtered = useMemo(() => {
     const q = normalizeSearchValue(search);
@@ -90,13 +96,45 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
     });
   };
 
+  const exitCompareMode = () => {
+    setCompareMode(false);
+    setCompareIds([]);
+  };
+
+  const toggleCompareSelection = (teacherId: string) => {
+    setCompareIds((prev) => {
+      if (prev.includes(teacherId)) return prev.filter((id) => id !== teacherId);
+      if (prev.length >= MAX_COMPARE_TEACHERS) return prev;
+      return [...prev, teacherId];
+    });
+  };
+
+  const handleStartCompare = () => {
+    if (compareIds.length < MIN_COMPARE_TEACHERS) return;
+    router.push(`/teachers/compare?ids=${compareIds.join(',')}`);
+  };
+
   return (
-    <PageShell className="py-10">
-      <h1 className="mb-1 text-3xl font-bold text-foreground dark:text-foreground-dark">
-        Teachers
-      </h1>
+    <PageShell className={compareMode ? 'py-10 pb-28' : 'py-10'}>
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <h1 className="text-3xl font-bold text-foreground dark:text-foreground-dark">Teachers</h1>
+        <button
+          type="button"
+          onClick={() => (compareMode ? exitCompareMode() : setCompareMode(true))}
+          className={
+            compareMode
+              ? 'flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-sm font-medium text-white'
+              : 'flex shrink-0 items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium text-foreground dark:border-line-dark dark:text-foreground-dark'
+          }
+        >
+          {compareMode ? <X size={16} /> : <GitCompare size={16} />}
+          {compareMode ? 'Cancel' : 'Compare'}
+        </button>
+      </div>
       <p className="mb-6 text-sm text-muted dark:text-muted-dark">
-        Sign in to read full reviews for any teacher.
+        {compareMode
+          ? `Pick ${MIN_COMPARE_TEACHERS}-${MAX_COMPARE_TEACHERS} teachers to compare side by side.`
+          : 'Sign in to read full reviews for any teacher.'}
       </p>
 
       <div className="max-w-3xl">
@@ -155,65 +193,105 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
                       .sort((a, b) => teacher.breakdown![b.key] - teacher.breakdown![a.key])
                       .slice(0, MAX_QUALITY_TAGS_SHOWN)
                   : [];
-              return (
-              <AnimatedListItem key={teacher.id} index={index}>
-                <Link href={`/teachers/${teacher.id}`} className="block h-full">
-                  <Card className="h-full">
-                    <div className="flex items-start">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/10">
-                        <Users size={20} className="text-accent" />
+              const selected = compareIds.includes(teacher.id);
+              const selectionDisabled = compareMode && !selected && compareIds.length >= MAX_COMPARE_TEACHERS;
+
+              const cardBody = (
+                <Card
+                  onPress={compareMode ? () => toggleCompareSelection(teacher.id) : undefined}
+                  className={`h-full ${selected ? 'border-accent' : ''} ${selectionDisabled ? 'opacity-50' : ''}`}
+                >
+                  <div className="flex items-start">
+                    {compareMode && (
+                      <div className="mr-2 mt-1 shrink-0">
+                        {selected ? (
+                          <CheckCircle2 size={20} className="text-accent" />
+                        ) : (
+                          <Circle size={20} className="text-muted dark:text-muted-dark" />
+                        )}
                       </div>
-                      <div className="ml-3 min-w-0 flex-1">
-                        <div className="flex items-start gap-1.5">
-                          <p
-                            className="break-words font-semibold leading-snug text-foreground dark:text-foreground-dark"
-                            title={teacher.name}
-                          >
-                            {teacher.name}
-                          </p>
-                          {teacher.verificationStatus === 'admin_verified' && (
-                            <BadgeCheck size={14} className="mt-0.5 shrink-0 text-accent" />
-                          )}
-                        </div>
-                        <p className="truncate text-sm text-muted dark:text-muted-dark">
-                          {teacher.department ?? 'Department not set'}
-                        </p>
-                      </div>
-                      {teacher.rating !== null ? (
-                        <span className="ml-2 shrink-0 rounded-lg bg-accent/10 px-2 py-1 text-sm font-semibold text-accent">
-                          ⭐ {teacher.rating.toFixed(1)} ({teacher.reviewCount})
-                        </span>
-                      ) : (
-                        <span className="ml-2 shrink-0 rounded-lg bg-line px-2 py-1 text-xs font-medium text-muted dark:bg-line-dark dark:text-muted-dark">
-                          New
-                        </span>
-                      )}
+                    )}
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/10">
+                      <Users size={20} className="text-accent" />
                     </div>
-                    {teacher.courses.length > 0 && (
-                      <p className="mt-3 line-clamp-2 text-xs text-muted dark:text-muted-dark">
-                        {teacher.courses.map(formatCourse).join(', ')}
-                      </p>
-                    )}
-                    {qualityTags.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {qualityTags.map((tag) => (
-                          <span
-                            key={tag.key}
-                            className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent"
-                          >
-                            {tag.label}
-                          </span>
-                        ))}
+                    <div className="ml-3 min-w-0 flex-1">
+                      <div className="flex items-start gap-1.5">
+                        <p
+                          className="break-words font-semibold leading-snug text-foreground dark:text-foreground-dark"
+                          title={teacher.name}
+                        >
+                          {teacher.name}
+                        </p>
+                        {teacher.verificationStatus === 'admin_verified' && (
+                          <BadgeCheck size={14} className="mt-0.5 shrink-0 text-accent" />
+                        )}
                       </div>
+                      <p className="truncate text-sm text-muted dark:text-muted-dark">
+                        {teacher.department ?? 'Department not set'}
+                      </p>
+                    </div>
+                    {teacher.rating !== null ? (
+                      <span className="ml-2 shrink-0 rounded-lg bg-accent/10 px-2 py-1 text-sm font-semibold text-accent">
+                        ⭐ {teacher.rating.toFixed(1)} ({teacher.reviewCount})
+                      </span>
+                    ) : (
+                      <span className="ml-2 shrink-0 rounded-lg bg-line px-2 py-1 text-xs font-medium text-muted dark:bg-line-dark dark:text-muted-dark">
+                        New
+                      </span>
                     )}
-                  </Card>
-                </Link>
-              </AnimatedListItem>
+                  </div>
+                  {teacher.courses.length > 0 && (
+                    <p className="mt-3 line-clamp-2 text-xs text-muted dark:text-muted-dark">
+                      {teacher.courses.map(formatCourse).join(', ')}
+                    </p>
+                  )}
+                  {qualityTags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {qualityTags.map((tag) => (
+                        <span
+                          key={tag.key}
+                          className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent"
+                        >
+                          {tag.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              );
+
+              return (
+                <AnimatedListItem key={teacher.id} index={index}>
+                  {compareMode ? (
+                    <div className={selectionDisabled ? 'pointer-events-none h-full' : 'h-full'}>{cardBody}</div>
+                  ) : (
+                    <Link href={`/teachers/${teacher.id}`} className="block h-full">
+                      {cardBody}
+                    </Link>
+                  )}
+                </AnimatedListItem>
               );
             })}
           </div>
         )}
       </div>
+
+      {compareMode && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-background/95 backdrop-blur dark:border-line-dark dark:bg-background-dark/95">
+          <div className={`${APP_CONTAINER_CLASS} flex items-center justify-between py-3`}>
+            <span className="text-sm font-medium text-foreground dark:text-foreground-dark">
+              {compareIds.length} of {MAX_COMPARE_TEACHERS} selected
+              {compareIds.length >= MAX_COMPARE_TEACHERS && ' — remove one to add another'}
+            </span>
+            <Button
+              label={`Compare${compareIds.length >= MIN_COMPARE_TEACHERS ? ` (${compareIds.length})` : ''}`}
+              onPress={handleStartCompare}
+              disabled={compareIds.length < MIN_COMPARE_TEACHERS}
+              className="px-5"
+            />
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }
