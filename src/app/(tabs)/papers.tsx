@@ -409,9 +409,10 @@ export default function PapersScreen() {
               <Pressable
                 onPress={() => setPreviewRotation((r) => (r + 90) % 360)}
                 hitSlop={8}
-                className="h-10 w-10 items-center justify-center rounded-full bg-white/10"
+                className="h-10 flex-row items-center gap-1.5 rounded-full bg-white/10 px-3"
               >
-                <Ionicons name="refresh" size={20} color="#FFFFFF" />
+                <Ionicons name="refresh" size={18} color="#FFFFFF" />
+                <Text className="text-sm font-medium text-white">Rotate</Text>
               </Pressable>
               <Pressable
                 onPress={() => setPreviewPaper(null)}

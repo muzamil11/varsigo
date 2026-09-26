@@ -494,16 +494,16 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
 
       {previewPaper && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2 backdrop-blur-sm sm:p-6"
           onClick={closePreview}
         >
           <div
-            className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-card dark:bg-card-dark"
+            className="flex h-full w-full flex-col overflow-hidden rounded-2xl bg-card shadow-2xl sm:h-[92vh] sm:w-[92vw] sm:max-w-6xl dark:bg-card-dark"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4 dark:border-line-dark">
+            <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-6 sm:py-4 dark:border-line-dark">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-foreground dark:text-foreground-dark">
+                <p className="truncate text-base font-semibold text-foreground dark:text-foreground-dark">
                   {previewPaper.title}
                 </p>
                 {previewFiles.length > 1 && (
@@ -517,11 +517,11 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
                   <button
                     type="button"
                     onClick={() => setRotation((r) => (r + 90) % 360)}
-                    aria-label="Rotate image"
-                    title="Rotate"
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-foreground dark:border-line-dark dark:text-foreground-dark"
+                    aria-label="Rotate image 90 degrees"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line px-3 text-sm font-medium text-foreground dark:border-line-dark dark:text-foreground-dark"
                   >
-                    <RotateCw size={16} />
+                    <RotateCw size={15} />
+                    <span className="hidden sm:inline">Rotate</span>
                   </button>
                 )}
                 <button
@@ -535,43 +535,48 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
               </div>
             </div>
 
-            <div className="flex flex-1 items-center justify-center overflow-auto bg-background dark:bg-background-dark">
+            <div className="flex flex-1 items-center justify-center overflow-hidden bg-background p-2 sm:p-6 dark:bg-background-dark">
               {getPaperFileType(previewFiles[previewIndex]) === 'image' ? (
                 // eslint-disable-next-line @next/next/no-img-element -- previewing an arbitrary uploaded file at full resolution, not worth Next/Image's static-size config here
                 <img
                   src={previewFiles[previewIndex]}
                   alt={`${previewPaper.title} page ${previewIndex + 1}`}
-                  style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.2s ease' }}
-                  className={rotation % 180 === 0 ? 'max-w-full' : 'max-h-full'}
+                  style={{
+                    transform: `rotate(${rotation}deg)`,
+                    transition: 'transform 0.2s ease',
+                    maxWidth: rotation % 180 !== 0 ? '75vh' : '100%',
+                    maxHeight: rotation % 180 !== 0 ? '82vw' : '100%',
+                  }}
+                  className="rounded-lg object-contain"
                 />
               ) : (
                 <iframe
                   src={previewFiles[previewIndex]}
                   title={`${previewPaper.title} page ${previewIndex + 1}`}
-                  className="h-[75vh] w-full"
+                  className="h-full w-full rounded-lg"
                 />
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-4 dark:border-line-dark">
+            <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 sm:px-6 sm:py-4 dark:border-line-dark">
               {previewFiles.length > 1 ? (
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
                     disabled={previewIndex === 0}
-                    className="inline-flex h-9 items-center gap-1 rounded-lg border border-line px-3 text-sm font-semibold text-foreground disabled:opacity-40 dark:border-line-dark dark:text-foreground-dark"
+                    className="inline-flex h-9 items-center gap-1 rounded-full border border-line px-3 text-sm font-semibold text-foreground disabled:opacity-40 dark:border-line-dark dark:text-foreground-dark"
                   >
                     <ChevronLeft size={15} />
-                    Previous
+                    <span className="hidden sm:inline">Previous</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setPreviewIndex((i) => Math.min(previewFiles.length - 1, i + 1))}
                     disabled={previewIndex >= previewFiles.length - 1}
-                    className="inline-flex h-9 items-center gap-1 rounded-lg border border-line px-3 text-sm font-semibold text-foreground disabled:opacity-40 dark:border-line-dark dark:text-foreground-dark"
+                    className="inline-flex h-9 items-center gap-1 rounded-full border border-line px-3 text-sm font-semibold text-foreground disabled:opacity-40 dark:border-line-dark dark:text-foreground-dark"
                   >
-                    Next
+                    <span className="hidden sm:inline">Next</span>
                     <ChevronRight size={15} />
                   </button>
                 </div>
@@ -586,7 +591,7 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
                   }`,
                 )}
                 download
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold text-white"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-white"
               >
                 <Download size={14} />
                 Download
