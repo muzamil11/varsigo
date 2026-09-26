@@ -107,7 +107,6 @@ export interface UploadPaperInput {
   files: File[];
 }
 
-export const MAX_PDF_BYTES = 20 * 1024 * 1024;
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 export const MAX_UPLOAD_TOTAL_BYTES = 30 * 1024 * 1024;
 export const MAX_IMAGE_PAGES = 10;
@@ -156,15 +155,13 @@ async function createSignedUploadSlots(files: File[]): Promise<SignedUploadSlot[
  *  base64 round-trip needed here, unlike React Native's fetch().blob()
  *  bug), so this is simpler than the mobile equivalent. */
 export function validateUploadFiles(files: File[]): string | null {
-  if (files.length === 0) return 'Choose a PDF or at least one image.';
+  if (files.length === 0) return 'Choose at least one image.';
   if (files.length > MAX_IMAGE_PAGES) return `Choose at most ${MAX_IMAGE_PAGES} files.`;
 
   let total = 0;
   for (const file of files) {
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    const limit = isPdf ? MAX_PDF_BYTES : MAX_IMAGE_BYTES;
-    if (file.size > limit) {
-      return `"${file.name}" is too large (max ${Math.round(limit / (1024 * 1024))}MB).`;
+    if (file.size > MAX_IMAGE_BYTES) {
+      return `"${file.name}" is too large (max ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB).`;
     }
     total += file.size;
   }

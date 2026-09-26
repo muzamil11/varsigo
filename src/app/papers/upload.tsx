@@ -11,7 +11,6 @@ import type { Department } from '@/features/departments/types';
 import {
   MAX_IMAGE_BYTES,
   MAX_IMAGE_PAGES,
-  MAX_PDF_BYTES,
   MAX_UPLOAD_TOTAL_BYTES,
   uploadPaper,
 } from '@/features/papers/api';
@@ -64,29 +63,13 @@ export default function UploadPaperScreen() {
 
   const handlePickFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/jpeg', 'image/png'],
+      type: ['image/jpeg', 'image/png'],
       multiple: true,
     });
     if (result.canceled) return;
 
     const pickedFiles = result.assets as PickedUploadFile[];
-    const hasPdf = pickedFiles.some((asset) => asset.mimeType === 'application/pdf');
     const hasImage = pickedFiles.some((asset) => asset.mimeType?.startsWith('image/'));
-
-    if (hasPdf && pickedFiles.length > 1) {
-      Alert.alert('Choose one type', 'Upload either one PDF or up to 10 image pages.');
-      return;
-    }
-
-    if (hasPdf) {
-      const picked = pickedFiles[0];
-      if ((picked.size ?? 0) > MAX_PDF_BYTES) {
-        Alert.alert('PDF is too large', `PDF uploads can be up to ${formatFileSize(MAX_PDF_BYTES)}.`);
-        return;
-      }
-      setFiles([picked]);
-      return;
-    }
 
     if (!hasImage) return;
     if (pickedFiles.length > MAX_IMAGE_PAGES) {
@@ -266,11 +249,11 @@ export default function UploadPaperScreen() {
 
         <Card className="mt-4">
           <Text className="mb-2 text-sm font-medium text-muted dark:text-muted-dark">
-            PDF or image pages
+            Image pages
           </Text>
           <Text className="mb-3 text-xs text-muted dark:text-muted-dark">
-            One PDF up to {formatFileSize(MAX_PDF_BYTES)}, or up to {MAX_IMAGE_PAGES} image
-            pages under {formatFileSize(MAX_UPLOAD_TOTAL_BYTES)} total.
+            Up to {MAX_IMAGE_PAGES} image pages under {formatFileSize(MAX_UPLOAD_TOTAL_BYTES)}{' '}
+            total.
           </Text>
           <Pressable
             onPress={handlePickFile}
@@ -282,9 +265,7 @@ export default function UploadPaperScreen() {
                 processingFile
                   ? 'sync-outline'
                   : files.length > 0
-                    ? files[0].mimeType?.startsWith('image/')
-                      ? 'image'
-                      : 'document-text'
+                    ? 'image'
                     : 'cloud-upload-outline'
               }
               size={20}
@@ -300,7 +281,7 @@ export default function UploadPaperScreen() {
                   ? files.length === 1
                     ? files[0].name
                     : `${files.length} image pages selected`
-                  : 'Tap to choose a PDF or image pages'}
+                  : 'Tap to choose image pages'}
             </Text>
           </Pressable>
 

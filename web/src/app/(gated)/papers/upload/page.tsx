@@ -294,7 +294,7 @@ export default function UploadPaperPage() {
                   <input
                     type="file"
                     multiple
-                    accept=".pdf,.jpg,.jpeg,.png"
+                    accept=".jpg,.jpeg,.png"
                     className="hidden"
                     onChange={(e) => handleFiles(e.target.files)}
                   />
@@ -302,10 +302,10 @@ export default function UploadPaperPage() {
                     <UploadCloud size={26} className="text-accent" />
                   </div>
                   <p className="text-base font-semibold text-foreground dark:text-foreground-dark">
-                    {files.length > 0 ? `${files.length} file(s) selected` : 'Choose PDF or images'}
+                    {files.length > 0 ? `${files.length} file(s) selected` : 'Choose images'}
                   </p>
                   <p className="mt-2 text-sm text-muted dark:text-muted-dark">
-                    PDF, JPG, JPEG, or PNG. Total selected size: {formatFileSize(totalSize)}.
+                    JPG, JPEG, or PNG. Total selected size: {formatFileSize(totalSize)}.
                   </p>
                 </label>
 
