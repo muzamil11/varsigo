@@ -101,7 +101,6 @@ async function fetchQuestionCountsByPaper(paperIds: string[]): Promise<Map<strin
 }
 
 const CONTENT_TYPES: Record<string, string> = {
-  pdf: 'application/pdf',
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
   png: 'image/png',
@@ -138,7 +137,6 @@ export interface UploadPaperInput {
   files: { uri: string; name: string; contentType?: string; size?: number }[];
 }
 
-export const MAX_PDF_BYTES = 20 * 1024 * 1024;
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 export const MAX_UPLOAD_TOTAL_BYTES = 30 * 1024 * 1024;
 export const MAX_IMAGE_PAGES = 10;
@@ -174,14 +172,14 @@ async function createSignedUploadSlots(
   return result.uploads;
 }
 
-/** Uploads the file (PDF as-is, images pre-compressed by the caller) to the
- *  "papers" storage bucket, then inserts the metadata row with approved:
- *  false — it appears in Papers only after moderation. */
+/** Uploads the (already client-compressed) images to the "papers" storage
+ *  bucket, then inserts the metadata row with approved: false — it appears
+ *  in Papers only after moderation. */
 export async function uploadPaper(input: UploadPaperInput): Promise<void> {
   const uploadedPaths: string[] = [];
   try {
     if (input.files.length === 0) {
-      throw new Error('Choose a PDF or at least one image.');
+      throw new Error('Choose at least one image.');
     }
 
     const uploadedUrls: string[] = [];

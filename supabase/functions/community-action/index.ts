@@ -66,7 +66,6 @@ interface VerifiedIdentity {
 }
 
 const PAPERS_BUCKET = 'papers';
-const MAX_PDF_BYTES = 20 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_UPLOAD_TOTAL_BYTES = 30 * 1024 * 1024;
 const MAX_IMAGE_PAGES = 10;
@@ -161,37 +160,29 @@ function safeFileName(name: string): string {
 
 function contentTypeFor(fileName: string, contentType?: string): string {
   const normalized = String(contentType ?? '').toLowerCase();
-  if (normalized === 'application/pdf' || normalized === 'image/jpeg' || normalized === 'image/png') {
-    return normalized;
-  }
+  if (normalized === 'image/jpeg' || normalized === 'image/png') return normalized;
 
   const ext = fileName.split('.').pop()?.toLowerCase();
-  if (ext === 'pdf') return 'application/pdf';
   if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
   if (ext === 'png') return 'image/png';
   return 'application/octet-stream';
 }
 
 function validateUploadFiles(files: UploadFileRequest[]): void {
-  if (files.length === 0) throw new Error('Choose a PDF or at least one image.');
+  if (files.length === 0) throw new Error('Choose at least one image.');
   if (files.length > MAX_IMAGE_PAGES) throw new Error(`Upload up to ${MAX_IMAGE_PAGES} image pages at once.`);
 
   const types = files.map((file) => contentTypeFor(file.name, file.contentType));
-  const hasPdf = types.some((type) => type === 'application/pdf');
-  const hasImage = types.some((type) => type === 'image/jpeg' || type === 'image/png');
-  if (hasPdf && files.length > 1) throw new Error('Upload either one PDF or up to 10 image pages.');
-  if (hasPdf && hasImage) throw new Error('Upload either one PDF or image pages, not both.');
-  if (types.some((type) => type === 'application/octet-stream')) {
-    throw new Error('Only PDF, JPG, and PNG files are allowed.');
+  if (types.some((type) => type !== 'image/jpeg' && type !== 'image/png')) {
+    throw new Error('Only JPG and PNG images are allowed.');
   }
 
   const total = files.reduce((sum, file) => sum + Number(file.size ?? 0), 0);
   if (total > MAX_UPLOAD_TOTAL_BYTES) throw new Error('Selected files are too large.');
 
-  for (const [index, file] of files.entries()) {
+  for (const file of files) {
     const size = Number(file.size ?? 0);
-    const limit = types[index] === 'application/pdf' ? MAX_PDF_BYTES : MAX_IMAGE_BYTES;
-    if (size > limit) throw new Error(`"${file.name}" is too large.`);
+    if (size > MAX_IMAGE_BYTES) throw new Error(`"${file.name}" is too large.`);
   }
 }
 
