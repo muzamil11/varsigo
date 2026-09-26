@@ -6,7 +6,7 @@ import { callCommunityFunction, isCommunityFunctionConfigured } from '@/lib/comm
 import { sanitizeText } from '@/lib/sanitize';
 import { PAPERS_BUCKET, supabase, toFriendlyError } from '@/lib/supabase';
 import { fetchModerationSettings } from '@/features/settings/api';
-import type { Paper, PaperKind } from './data';
+import type { Paper, PaperFolder, PaperKind } from './data';
 
 interface RawUploadRow {
   id: string;
@@ -17,8 +17,10 @@ interface RawUploadRow {
   file_url: string;
   file_urls: string[] | null;
   created_at: string;
+  folder_id: string | null;
   departments: { name: string } | null;
   users: { name: string | null; email: string | null } | null;
+  paper_folders: { name: string } | null;
 }
 
 interface SignedUploadSlot {
@@ -31,6 +33,7 @@ export interface PaperFilters {
   departmentId?: string;
   year?: number;
   kind?: PaperKind;
+  folderId?: string;
 }
 
 function formatDate(iso: string): string {
@@ -41,12 +44,22 @@ function formatDate(iso: string): string {
   });
 }
 
+export async function fetchPaperFolders(): Promise<PaperFolder[]> {
+  try {
+    const { data, error } = await supabase.from('paper_folders').select('id, name').order('name');
+    if (error) throw error;
+    return (data ?? []) as PaperFolder[];
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
 export async function fetchPapers(filters: PaperFilters = {}): Promise<Paper[]> {
   try {
     let query = supabase
       .from('uploads')
       .select(
-        'id, title, subject, year, type, file_url, file_urls, created_at, departments(name), users(name, email)',
+        'id, title, subject, year, type, file_url, file_urls, created_at, folder_id, departments(name), users(name, email), paper_folders(name)',
       )
       .eq('approved', true)
       .order('created_at', { ascending: false });
@@ -54,6 +67,7 @@ export async function fetchPapers(filters: PaperFilters = {}): Promise<Paper[]> 
     if (filters.departmentId) query = query.eq('department_id', filters.departmentId);
     if (filters.year) query = query.eq('year', filters.year);
     if (filters.kind) query = query.eq('type', filters.kind);
+    if (filters.folderId) query = query.eq('folder_id', filters.folderId);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -73,6 +87,8 @@ export async function fetchPapers(filters: PaperFilters = {}): Promise<Paper[]> 
       uploaderName: isAdminEmail(u.users?.email) ? 'Admin' : (u.users?.name ?? 'Anonymous'),
       createdAt: formatDate(u.created_at),
       questionCount: questionCounts.get(u.id) ?? 0,
+      folderId: u.folder_id,
+      folderName: u.paper_folders?.name ?? null,
     }));
   } catch (error) {
     throw new Error(toFriendlyError(error));

@@ -58,6 +58,7 @@ export function PaperCard({
           </Text>
           <Text className="mt-0.5 text-xs text-muted dark:text-muted-dark">
             {[
+              paper.folderName,
               paper.department,
               paper.year,
               PAPER_KIND_LABELS[paper.kind],

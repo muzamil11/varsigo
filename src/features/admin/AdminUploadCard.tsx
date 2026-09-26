@@ -7,7 +7,7 @@ import { Button, Card, Chip } from '@/components';
 import { getPaperFileType, PAPER_KIND_LABELS, type PaperKind } from '@/features/papers/data';
 import { useThemeColors } from '@/store/themeStore';
 import type { UpdateUploadInput } from './api';
-import type { AdminDepartment, AdminUpload } from './data';
+import type { AdminDepartment, AdminFolder, AdminUpload } from './data';
 
 const KIND_OPTIONS: { value: PaperKind; label: string }[] = [
   { value: 'past_paper', label: PAPER_KIND_LABELS.past_paper },
@@ -20,6 +20,7 @@ const KIND_OPTIONS: { value: PaperKind; label: string }[] = [
 export function AdminUploadCard({
   upload,
   departments,
+  folders,
   onApprove,
   onReject,
   onDelete,
@@ -27,6 +28,7 @@ export function AdminUploadCard({
 }: {
   upload: AdminUpload;
   departments: AdminDepartment[];
+  folders: AdminFolder[];
   onApprove?: () => void;
   onReject?: () => void;
   onDelete?: () => void;
@@ -43,6 +45,7 @@ export function AdminUploadCard({
   const [departmentId, setDepartmentId] = useState<string | null>(upload.departmentId);
   const [year, setYear] = useState(upload.year?.toString() ?? '');
   const [kind, setKind] = useState<PaperKind>(upload.kind);
+  const [folderId, setFolderId] = useState<string | null>(upload.folderId);
 
   const startEdit = () => {
     setTitle(upload.title);
@@ -50,6 +53,7 @@ export function AdminUploadCard({
     setDepartmentId(upload.departmentId);
     setYear(upload.year?.toString() ?? '');
     setKind(upload.kind);
+    setFolderId(upload.folderId);
     setSaveError(null);
     setEditing(true);
   };
@@ -58,7 +62,7 @@ export function AdminUploadCard({
     setSaving(true);
     setSaveError(null);
     try {
-      await onSave({ title, subject, departmentId, year: year ? Number(year) : null, kind });
+      await onSave({ title, subject, departmentId, year: year ? Number(year) : null, kind, folderId });
       setEditing(false);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Could not save changes.');
@@ -95,6 +99,12 @@ export function AdminUploadCard({
             <Chip key={k.value} label={k.label} selected={kind === k.value} onPress={() => setKind(k.value)} />
           ))}
         </ScrollView>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+          <Chip label="Uncategorized" selected={folderId === null} onPress={() => setFolderId(null)} />
+          {folders.map((f) => (
+            <Chip key={f.id} label={f.name} selected={folderId === f.id} onPress={() => setFolderId(f.id)} />
+          ))}
+        </ScrollView>
         <TextInput
           value={year}
           onChangeText={(v) => setYear(v.replace(/[^0-9]/g, ''))}
@@ -124,6 +134,7 @@ export function AdminUploadCard({
           upload.year,
           PAPER_KIND_LABELS[upload.kind],
           fileType === 'image' ? 'Image' : 'PDF',
+          upload.folder ?? 'Uncategorized',
         ]
           .filter(Boolean)
           .join(' · ')}

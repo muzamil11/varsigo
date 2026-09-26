@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Animated, FlatList, ScrollView, Text, View } from 'react-native';
+import { Alert, Animated, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import {
   AnimatedListItem,
@@ -17,6 +17,7 @@ import { AdminCommunityCard } from '@/features/admin/AdminCommunityCard';
 import {
   addCourse,
   addDepartment,
+  addFolder,
   addTeacher,
   assignTeacherCourse,
   approveReview,
@@ -24,10 +25,12 @@ import {
   approveUpload,
   deleteCourse,
   deleteDepartment,
+  deleteFolder,
   deleteTeacher,
   dismissCommunityReport,
   fetchAdminDepartments,
   fetchAdminCourses,
+  fetchAdminFolders,
   fetchAdminStats,
   fetchAdminTeachers,
   fetchApprovedUploads,
@@ -47,6 +50,7 @@ import type {
   AdminDepartment,
   AdminCourse,
   AdminCommunityReport,
+  AdminFolder,
   AdminReview,
   AdminStats,
   AdminTeacher,
@@ -117,6 +121,9 @@ export default function AdminScreen() {
   const [publishedUploads, setPublishedUploads] = useState<AdminUpload[]>([]);
   const [uploadsView, setUploadsView] = useState<'pending' | 'published'>('pending');
   const [adminDepartments, setAdminDepartments] = useState<AdminDepartment[]>([]);
+  const [adminFolders, setAdminFolders] = useState<AdminFolder[]>([]);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [addingFolder, setAddingFolder] = useState(false);
   const [adminCourses, setAdminCourses] = useState<AdminCourse[]>([]);
   const [adminTeachers, setAdminTeachers] = useState<AdminTeacher[]>([]);
   const [teacherSuggestions, setTeacherSuggestions] = useState<TeacherSuggestion[]>([]);
@@ -144,6 +151,7 @@ export default function AdminScreen() {
         loadAdminResource('uploads', fetchPendingUploads(user.email)),
         loadAdminResource('published uploads', fetchApprovedUploads(user.email)),
         loadAdminResource('departments', fetchAdminDepartments(user.email)),
+        loadAdminResource('folders', fetchAdminFolders(user.email)),
         loadAdminResource('courses', fetchAdminCourses(user.email)),
         loadAdminResource('teachers', fetchAdminTeachers(user.email)),
         loadAdminResource('teacher suggestions', fetchPendingTeacherSuggestions(user.email)),
@@ -169,6 +177,7 @@ export default function AdminScreen() {
         uploadsResult,
         publishedUploadsResult,
         adminDepartmentsResult,
+        adminFoldersResult,
         coursesResult,
         teachersResult,
         suggestionsResult,
@@ -181,6 +190,7 @@ export default function AdminScreen() {
       if (uploadsResult.status === 'fulfilled') setUploads(uploadsResult.value);
       if (publishedUploadsResult.status === 'fulfilled') setPublishedUploads(publishedUploadsResult.value);
       if (adminDepartmentsResult.status === 'fulfilled') setAdminDepartments(adminDepartmentsResult.value);
+      if (adminFoldersResult.status === 'fulfilled') setAdminFolders(adminFoldersResult.value);
       if (coursesResult.status === 'fulfilled') setAdminCourses(coursesResult.value);
       if (teachersResult.status === 'fulfilled') setAdminTeachers(teachersResult.value);
       if (suggestionsResult.status === 'fulfilled') setTeacherSuggestions(suggestionsResult.value);
@@ -313,7 +323,8 @@ export default function AdminScreen() {
     if (!user) return;
     await updateUpload(user.email, upload.id, input);
     const department = adminDepartments.find((d) => d.id === input.departmentId)?.name ?? null;
-    const patch = { ...input, department };
+    const folder = adminFolders.find((f) => f.id === input.folderId)?.name ?? null;
+    const patch = { ...input, department, folder };
     const setter = scope === 'pending' ? setUploads : setPublishedUploads;
     setter((prev) => prev.map((u) => (u.id === upload.id ? { ...u, ...patch } : u)));
   };
@@ -386,6 +397,47 @@ export default function AdminScreen() {
               );
               setAdminDepartments((prev) => [department, ...prev]);
               setDepartments((prev) => [{ id: department.id, name: department.name }, ...prev]);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleAddFolder = async () => {
+    if (!user || newFolderName.trim().length === 0) return;
+    setAddingFolder(true);
+    try {
+      await addFolder(user.email, newFolderName);
+      setNewFolderName('');
+      await load('silent');
+    } catch (err) {
+      Alert.alert('Could not add folder', err instanceof Error ? err.message : 'Please try again.');
+    } finally {
+      setAddingFolder(false);
+    }
+  };
+
+  const handleDeleteFolder = (folder: AdminFolder) => {
+    Alert.alert(
+      'Delete folder?',
+      `Papers in "${folder.name}" become uncategorized, not deleted.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setAdminFolders((prev) => prev.filter((f) => f.id !== folder.id));
+            try {
+              await deleteFolder(user!.email, folder.id);
+              await load('silent');
+            } catch (err) {
+              Alert.alert(
+                'Could not delete folder',
+                err instanceof Error ? err.message : 'Please try again.',
+              );
+              setAdminFolders((prev) => [folder, ...prev]);
             }
           },
         },
@@ -681,11 +733,56 @@ export default function AdminScreen() {
                 ItemSeparatorComponent={() => (
                   <View className="mb-3 h-px bg-line dark:bg-line-dark" />
                 )}
+                ListHeaderComponent={
+                  <Card className="mb-4">
+                    <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">
+                      Folders
+                    </Text>
+                    <Text className="mb-3 text-xs text-muted dark:text-muted-dark">
+                      Assign a paper to one while editing it below. Add a new one here first if the
+                      subject doesn&apos;t exist yet.
+                    </Text>
+                    <View className="mb-3 flex-row items-center gap-2">
+                      <TextInput
+                        value={newFolderName}
+                        onChangeText={setNewFolderName}
+                        placeholder="New folder name (e.g. IPCV)"
+                        placeholderTextColor={colors.textMuted}
+                        className="h-11 flex-1 rounded-xl border border-line bg-background px-3 text-sm text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+                      />
+                      <Button
+                        label="Add"
+                        onPress={handleAddFolder}
+                        loading={addingFolder}
+                        disabled={newFolderName.trim().length === 0}
+                        className="h-11 px-4"
+                      />
+                    </View>
+                    {adminFolders.length > 0 && (
+                      <View className="flex-row flex-wrap gap-2">
+                        {adminFolders.map((folder) => (
+                          <View
+                            key={folder.id}
+                            className="flex-row items-center gap-1.5 rounded-full border border-line bg-background px-3 py-1.5 dark:border-line-dark dark:bg-background-dark"
+                          >
+                            <Text className="text-xs font-medium text-foreground dark:text-foreground-dark">
+                              {folder.name}
+                            </Text>
+                            <Pressable onPress={() => handleDeleteFolder(folder)} hitSlop={6}>
+                              <Ionicons name="close-circle" size={14} color={colors.textMuted} />
+                            </Pressable>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </Card>
+                }
                 renderItem={({ item, index }) => (
                   <AnimatedListItem index={index}>
                     <AdminUploadCard
                       upload={item}
                       departments={adminDepartments}
+                      folders={adminFolders}
                       onApprove={uploadsView === 'pending' ? () => handleApproveUpload(item) : undefined}
                       onReject={uploadsView === 'pending' ? () => handleRejectUpload(item) : undefined}
                       onDelete={uploadsView === 'published' ? () => handleDeletePublishedUpload(item) : undefined}

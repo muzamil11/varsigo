@@ -17,12 +17,19 @@ import {
 } from '@/components';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
-import { fetchPapers } from '@/features/papers/api';
-import { getPaperFileType, PAPER_YEARS, type Paper, type PaperKind } from '@/features/papers/data';
+import { fetchPaperFolders, fetchPapers } from '@/features/papers/api';
+import {
+  getPaperFileType,
+  PAPER_YEARS,
+  type Paper,
+  type PaperFolder,
+  type PaperKind,
+} from '@/features/papers/data';
 import { PaperCard } from '@/features/papers/PaperCard';
 import { useThemeColors } from '@/store/themeStore';
 
 const ALL_DEPARTMENTS: Department = { id: 'all', name: 'All' };
+const ALL_FOLDERS: PaperFolder = { id: 'all', name: 'All' };
 
 const KIND_OPTIONS: { value: 'All' | PaperKind; label: string }[] = [
   { value: 'All', label: 'All' },
@@ -35,10 +42,12 @@ export default function PapersScreen() {
   const colors = useThemeColors();
   const [query, setQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState<Department>(ALL_DEPARTMENTS);
+  const [selectedFolder, setSelectedFolder] = useState<PaperFolder>(ALL_FOLDERS);
   const [year, setYear] = useState<(typeof PAPER_YEARS)[number]>('All');
   const [kind, setKind] = useState<'All' | PaperKind>('All');
 
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [folders, setFolders] = useState<PaperFolder[]>([]);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,7 +56,9 @@ export default function PapersScreen() {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [previewPaper, setPreviewPaper] = useState<Paper | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewRotation, setPreviewRotation] = useState(0);
   const [departmentPickerOpen, setDepartmentPickerOpen] = useState(false);
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const hasLoaded = useRef(false);
 
   const load = useCallback(async (isRefresh = false) => {
@@ -55,15 +66,18 @@ export default function PapersScreen() {
     shouldShowSkeleton ? setLoading(true) : setRefreshing(true);
     setError(null);
     try {
-      const [departmentList, paperList] = await Promise.all([
+      const [departmentList, folderList, paperList] = await Promise.all([
         fetchDepartments(),
+        fetchPaperFolders(),
         fetchPapers({
           departmentId: selectedDept.id === 'all' ? undefined : selectedDept.id,
+          folderId: selectedFolder.id === 'all' ? undefined : selectedFolder.id,
           year: year === 'All' ? undefined : Number(year),
           kind: kind === 'All' ? undefined : kind,
         }),
       ]);
       setDepartments(departmentList);
+      setFolders(folderList);
       setPapers(paperList);
       hasLoaded.current = true;
     } catch (err) {
@@ -71,7 +85,7 @@ export default function PapersScreen() {
     } finally {
       shouldShowSkeleton ? setLoading(false) : setRefreshing(false);
     }
-  }, [selectedDept.id, year, kind]);
+  }, [selectedDept.id, selectedFolder.id, year, kind]);
 
   useFocusEffect(
     useCallback(() => {
@@ -119,6 +133,7 @@ export default function PapersScreen() {
     if (getPaperFileType(paper.fileUrl) === 'image') {
       setPreviewPaper(paper);
       setPreviewIndex(0);
+      setPreviewRotation(0);
       return;
     }
     handleDownload(paper);
@@ -180,15 +195,27 @@ export default function PapersScreen() {
         </View>
       </View>
 
-      <View className="mt-3 px-4">
+      <View className="mt-3 flex-row gap-2 px-4">
         <Pressable
           onPress={() => setDepartmentPickerOpen(true)}
-          className="flex-row items-center justify-between rounded-2xl border border-line bg-card px-4 py-3 dark:border-line-dark dark:bg-card-dark"
+          className="flex-1 flex-row items-center justify-between rounded-2xl border border-line bg-card px-4 py-3 dark:border-line-dark dark:bg-card-dark"
         >
           <View>
             <Text className="text-xs text-muted dark:text-muted-dark">Department</Text>
             <Text className="mt-1 text-sm font-semibold text-foreground dark:text-foreground-dark">
               {selectedDept.name}
+            </Text>
+          </View>
+          <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
+        </Pressable>
+        <Pressable
+          onPress={() => setFolderPickerOpen(true)}
+          className="flex-1 flex-row items-center justify-between rounded-2xl border border-line bg-card px-4 py-3 dark:border-line-dark dark:bg-card-dark"
+        >
+          <View>
+            <Text className="text-xs text-muted dark:text-muted-dark">Folder</Text>
+            <Text className="mt-1 text-sm font-semibold text-foreground dark:text-foreground-dark">
+              {selectedFolder.name}
             </Text>
           </View>
           <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
@@ -286,18 +313,28 @@ export default function PapersScreen() {
                 ? `Page ${previewIndex + 1} of ${previewPaper.fileUrls.length}`
                 : ''}
             </Text>
-            <Pressable
-              onPress={() => setPreviewPaper(null)}
-              hitSlop={8}
-              className="h-10 w-10 items-center justify-center rounded-full bg-white/10"
-            >
-              <Ionicons name="close" size={22} color="#FFFFFF" />
-            </Pressable>
+            <View className="flex-row items-center gap-2">
+              <Pressable
+                onPress={() => setPreviewRotation((r) => (r + 90) % 360)}
+                hitSlop={8}
+                className="h-10 w-10 items-center justify-center rounded-full bg-white/10"
+              >
+                <Ionicons name="refresh" size={20} color="#FFFFFF" />
+              </Pressable>
+              <Pressable
+                onPress={() => setPreviewPaper(null)}
+                hitSlop={8}
+                className="h-10 w-10 items-center justify-center rounded-full bg-white/10"
+              >
+                <Ionicons name="close" size={22} color="#FFFFFF" />
+              </Pressable>
+            </View>
           </View>
           <View className="flex-1 items-center justify-center">
             {previewPaper && (
               <Image
                 source={{ uri: previewPaper.fileUrls[previewIndex] ?? previewPaper.fileUrl }}
+                style={{ transform: [{ rotate: `${previewRotation}deg` }] }}
                 className="h-full w-full"
                 resizeMode="contain"
               />
@@ -309,18 +346,22 @@ export default function PapersScreen() {
                 <Button
                   label="Previous"
                   variant="ghost"
-                  onPress={() => setPreviewIndex((index) => Math.max(0, index - 1))}
+                  onPress={() => {
+                    setPreviewIndex((index) => Math.max(0, index - 1));
+                    setPreviewRotation(0);
+                  }}
                   disabled={previewIndex === 0}
                   className="flex-1 border-white/20"
                 />
                 <Button
                   label="Next"
                   variant="ghost"
-                  onPress={() =>
+                  onPress={() => {
                     setPreviewIndex((index) =>
                       Math.min((previewPaper?.fileUrls.length ?? 1) - 1, index + 1),
-                    )
-                  }
+                    );
+                    setPreviewRotation(0);
+                  }}
                   disabled={previewIndex >= previewPaper.fileUrls.length - 1}
                   className="flex-1 border-white/20"
                 />
@@ -370,6 +411,54 @@ export default function PapersScreen() {
                     {item.name}
                   </Text>
                   {selectedDept.id === item.id && (
+                    <Ionicons name="checkmark" size={18} color={colors.accent} />
+                  )}
+                </Pressable>
+              )}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={folderPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFolderPickerOpen(false)}
+      >
+        <Pressable
+          className="flex-1 justify-end bg-black/50"
+          onPress={() => setFolderPickerOpen(false)}
+        >
+          <Pressable className="max-h-[70%] rounded-t-3xl bg-card p-4 dark:bg-card-dark">
+            <View className="mb-3 flex-row items-center justify-between">
+              <Text className="text-lg font-bold text-foreground dark:text-foreground-dark">
+                Select folder
+              </Text>
+              <Pressable
+                onPress={() => setFolderPickerOpen(false)}
+                hitSlop={8}
+                className="h-9 w-9 items-center justify-center rounded-full border border-line dark:border-line-dark"
+              >
+                <Ionicons name="close" size={18} color={colors.text} />
+              </Pressable>
+            </View>
+            <FlatList
+              data={[ALL_FOLDERS, ...folders]}
+              keyExtractor={(folder) => folder.id}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => {
+                    setSelectedFolder(item);
+                    setFolderPickerOpen(false);
+                  }}
+                  className="flex-row items-center justify-between rounded-xl px-3 py-3"
+                >
+                  <Text className="text-base text-foreground dark:text-foreground-dark">
+                    {item.name}
+                  </Text>
+                  {selectedFolder.id === item.id && (
                     <Ionicons name="checkmark" size={18} color={colors.accent} />
                   )}
                 </Pressable>

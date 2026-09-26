@@ -30,6 +30,13 @@ export interface AdminUpload {
   fileUrl: string;
   fileUrls: string[];
   createdAt: string;
+  folderId: string | null;
+  folder: string | null;
+}
+
+export interface AdminFolder {
+  id: string;
+  name: string;
 }
 
 export interface AdminStats {

@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   LogIn,
   MessageCircle,
+  RotateCw,
   Search as SearchIcon,
   UploadCloud,
   X,
@@ -22,15 +23,16 @@ import { AnimatedListItem, Chip, Combobox, PageShell, SearchBar, StateMessage } 
 import type { Department } from '@/features/departments/types';
 import { useAuthStore } from '@/store/authStore';
 import { fetchPapers } from './api';
-import { PAPER_KIND_LABELS, buildDownloadUrl, getPaperFileType, type Paper } from './data';
+import { PAPER_KIND_LABELS, buildDownloadUrl, getPaperFileType, type Paper, type PaperFolder } from './data';
 
 interface PaperBrowserProps {
   papers: Paper[];
   departments: Department[];
+  folders: PaperFolder[];
   error?: string | null;
 }
 
-export function PaperBrowser({ papers: initialPapers, departments, error }: PaperBrowserProps) {
+export function PaperBrowser({ papers: initialPapers, departments, folders, error }: PaperBrowserProps) {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
   const [papers, setPapers] = useState(initialPapers);
@@ -38,12 +40,13 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
   const [clientError, setClientError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [departmentId, setDepartmentId] = useState<string | null>(null);
+  const [folderId, setFolderId] = useState<string | null>(null);
   const [kind, setKind] = useState<'All' | 'past_paper' | 'notes'>('All');
   const [previewPaper, setPreviewPaper] = useState<Paper | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
   const loginHref = '/login?redirect=/papers';
   const uploadHref = '/papers/upload';
-  const isFiltered = Boolean(search.trim() || departmentId || kind !== 'All');
+  const isFiltered = Boolean(search.trim() || departmentId || folderId || kind !== 'All');
   const visibleError = clientError ?? error;
   // The papers array always starts from the server-rendered `initialPapers`
   // (never undefined), so there's always something real to show — including
@@ -90,6 +93,7 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
         const dept = departments.find((d) => d.id === departmentId);
         if (dept && p.department !== dept.name) return false;
       }
+      if (folderId && p.folderId !== folderId) return false;
       if (!q) return true;
       return (
         p.title.toLowerCase().includes(q) ||
@@ -97,7 +101,7 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
         (p.department ?? '').toLowerCase().includes(q)
       );
     });
-  }, [papers, search, departmentId, kind, departments]);
+  }, [papers, search, departmentId, folderId, kind, departments]);
 
   const openPreview = (paper: Paper, index: number) => {
     setPreviewPaper(paper);
@@ -109,6 +113,7 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
       ? previewPaper.fileUrls
       : [previewPaper.fileUrl]
     : [];
+  const [rotation, setRotation] = useState(0);
 
   useEffect(() => {
     if (!previewPaper) return;
@@ -122,6 +127,13 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [previewPaper]);
+
+  // Rotation is a display-only fix for a crooked scan — it never touches the
+  // stored file, so it resets whenever a different page or paper is opened.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional, resets the rotation once a different page/paper is actually open
+    setRotation(0);
+  }, [previewPaper, previewIndex]);
 
   const heroCopy = isAuthenticated
     ? 'Browse approved papers, download files, or upload useful study resources for other NED students.'
@@ -186,7 +198,7 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
         {hasHydrated && !isAuthenticated ? null : (
           <div className="p-5 sm:p-7 lg:p-9">
             <div className="rounded-2xl border border-line bg-background p-4 dark:border-line-dark dark:bg-background-dark">
-              <div className="grid gap-3 lg:grid-cols-[minmax(280px,1fr)_260px]">
+              <div className="grid gap-3 lg:grid-cols-[minmax(240px,1fr)_200px_200px]">
                 <SearchBar
                   value={search}
                   onChangeText={setSearch}
@@ -205,6 +217,19 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
                   ]}
                   className="h-12 rounded-full border border-line bg-card px-4 text-sm text-foreground focus:border-accent dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
                 />
+                <label className="sr-only" htmlFor="paper-folder">
+                  Folder
+                </label>
+                <Combobox
+                  id="paper-folder"
+                  value={folderId ?? ''}
+                  onChange={(v) => setFolderId(v || null)}
+                  options={[
+                    { value: '', label: 'All folders' },
+                    ...folders.map((folder) => ({ value: folder.id, label: folder.name })),
+                  ]}
+                  className="h-12 rounded-full border border-line bg-card px-4 text-sm text-foreground focus:border-accent dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
+                />
               </div>
 
               <div className="mt-4 flex flex-wrap">
@@ -216,6 +241,20 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
                 />
                 <Chip label="Notes" selected={kind === 'notes'} onPress={() => setKind('notes')} />
               </div>
+
+              {folders.length > 0 && (
+                <div className="mt-2 flex flex-wrap">
+                  <Chip label="All subjects" selected={folderId === null} onPress={() => setFolderId(null)} />
+                  {folders.map((folder) => (
+                    <Chip
+                      key={folder.id}
+                      label={folder.name}
+                      selected={folderId === folder.id}
+                      onPress={() => setFolderId(folder.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="mt-6">
@@ -269,6 +308,11 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
                               {paper.year && (
                                 <span className="rounded-full border border-line px-2.5 py-1 text-xs font-semibold text-foreground dark:border-line-dark dark:text-foreground-dark">
                                   {paper.year}
+                                </span>
+                              )}
+                              {paper.folderName && (
+                                <span className="rounded-full border border-accent/30 bg-accent/5 px-2.5 py-1 text-xs font-semibold text-accent">
+                                  {paper.folderName}
                                 </span>
                               )}
                             </div>
@@ -384,23 +428,37 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
                   </p>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={closePreview}
-                aria-label="Close preview"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-foreground dark:border-line-dark dark:text-foreground-dark"
-              >
-                <X size={18} />
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {getPaperFileType(previewFiles[previewIndex]) === 'image' && (
+                  <button
+                    type="button"
+                    onClick={() => setRotation((r) => (r + 90) % 360)}
+                    aria-label="Rotate image"
+                    title="Rotate"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-foreground dark:border-line-dark dark:text-foreground-dark"
+                  >
+                    <RotateCw size={16} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={closePreview}
+                  aria-label="Close preview"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-foreground dark:border-line-dark dark:text-foreground-dark"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-background dark:bg-background-dark">
+            <div className="flex flex-1 items-center justify-center overflow-auto bg-background dark:bg-background-dark">
               {getPaperFileType(previewFiles[previewIndex]) === 'image' ? (
                 // eslint-disable-next-line @next/next/no-img-element -- previewing an arbitrary uploaded file at full resolution, not worth Next/Image's static-size config here
                 <img
                   src={previewFiles[previewIndex]}
                   alt={`${previewPaper.title} page ${previewIndex + 1}`}
-                  className="w-full"
+                  style={{ transform: `rotate(${rotation}deg)`, transition: 'transform 0.2s ease' }}
+                  className={rotation % 180 === 0 ? 'max-w-full' : 'max-h-full'}
                 />
               ) : (
                 <iframe

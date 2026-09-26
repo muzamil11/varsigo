@@ -7,6 +7,7 @@ import type {
   AdminDepartment,
   AdminCourse,
   AdminCommunityReport,
+  AdminFolder,
   AdminReview,
   AdminStats,
   AdminTeacher,
@@ -143,11 +144,13 @@ interface RawPendingUploadRow {
   file_url: string;
   file_urls: string[] | null;
   created_at: string;
+  folder_id: string | null;
   departments: { name: string } | null;
+  paper_folders: { name: string } | null;
 }
 
 const UPLOAD_COLUMNS =
-  'id, title, subject, department_id, year, type, file_url, file_urls, created_at, departments(name)';
+  'id, title, subject, department_id, year, type, file_url, file_urls, created_at, folder_id, departments(name), paper_folders(name)';
 
 function mapAdminUpload(u: RawPendingUploadRow): AdminUpload {
   return {
@@ -161,6 +164,8 @@ function mapAdminUpload(u: RawPendingUploadRow): AdminUpload {
     fileUrl: u.file_url,
     fileUrls: u.file_urls?.length ? u.file_urls : [u.file_url],
     createdAt: formatDate(u.created_at),
+    folderId: u.folder_id,
+    folder: u.paper_folders?.name ?? null,
   };
 }
 
@@ -230,6 +235,7 @@ export interface UpdateUploadInput {
   departmentId: string | null;
   year: number | null;
   kind: PaperKind;
+  folderId: string | null;
 }
 
 /** Edits a paper's metadata — works on a pending OR already-published
@@ -252,8 +258,49 @@ export async function updateUpload(
         department_id: input.departmentId,
         year: input.year,
         type: input.kind,
+        folder_id: input.folderId,
       })
       .eq('id', uploadId);
+    if (error) throw error;
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
+export async function fetchAdminFolders(adminEmail: string): Promise<AdminFolder[]> {
+  assertAdmin(adminEmail);
+  try {
+    const { data, error } = await supabase.from('paper_folders').select('id, name').order('name');
+    if (error) throw error;
+    return (data ?? []) as AdminFolder[];
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
+export async function addFolder(adminEmail: string, name: string): Promise<void> {
+  assertAdmin(adminEmail);
+  if (isAdminFunctionConfigured()) {
+    return callAdminFunction<void>('addPaperFolder', { name: sanitizeText(name) });
+  }
+  try {
+    const { error } = await supabase.from('paper_folders').insert({
+      name: sanitizeText(name),
+      university: 'NED',
+    });
+    if (error) throw error;
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
+export async function deleteFolder(adminEmail: string, folderId: string): Promise<void> {
+  assertAdmin(adminEmail);
+  if (isAdminFunctionConfigured()) {
+    return callAdminFunction<void>('deletePaperFolder', { folderId });
+  }
+  try {
+    const { error } = await supabase.from('paper_folders').delete().eq('id', folderId);
     if (error) throw error;
   } catch (error) {
     throw new Error(toFriendlyError(error));

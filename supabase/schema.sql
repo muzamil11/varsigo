@@ -127,6 +127,25 @@ create table if not exists uploads (
 
 alter table uploads add column if not exists file_urls text[] default '{}';
 
+-- Admin-curated folders for browsing papers by subject (e.g. "IPCV") instead
+-- of one flat list. Deliberately separate from the free-text `subject` a
+-- student types on upload — students never write to this table directly;
+-- an admin assigns a paper to a folder while reviewing it (see admin-action
+-- edge function's addPaperFolder/deletePaperFolder and updateUpload).
+create table if not exists paper_folders (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  university text default 'NED',
+  created_at timestamptz default now()
+);
+
+alter table uploads add column if not exists folder_id uuid references paper_folders(id) on delete set null;
+
+alter table paper_folders enable row level security;
+
+drop policy if exists "public read paper folders" on paper_folders;
+create policy "public read paper folders" on paper_folders for select using (true);
+
 create table if not exists teacher_suggestions (
   id uuid primary key default gen_random_uuid(),
   name text not null,

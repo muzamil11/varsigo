@@ -16,6 +16,16 @@ export interface Paper {
   uploaderName: string;
   createdAt: string;
   questionCount: number;
+  folderId: string | null;
+  folderName: string | null;
+}
+
+/** An admin-curated folder for browsing papers by subject — see
+ *  paper_folders in supabase/schema.sql. Assigned by an admin while
+ *  reviewing an upload, not chosen by the student who uploaded it. */
+export interface PaperFolder {
+  id: string;
+  name: string;
 }
 
 export const PAPER_KIND_LABELS: Record<PaperKind, string> = {

@@ -86,8 +86,18 @@ Deno.serve(async (req) => {
             department_id: payload.departmentId ?? null,
             year: payload.year ?? null,
             type: payload.kind,
+            folder_id: payload.folderId ?? null,
           })
           .eq('id', payload.uploadId));
+        break;
+      case 'addPaperFolder':
+        ({ error } = await supabase.from('paper_folders').insert({
+          name: sanitizeText(payload.name),
+          university: 'NED',
+        }));
+        break;
+      case 'deletePaperFolder':
+        ({ error } = await supabase.from('paper_folders').delete().eq('id', payload.folderId));
         break;
       case 'listPendingLostFound': {
         const { data, error: listError } = await supabase

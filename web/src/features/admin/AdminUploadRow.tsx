@@ -5,12 +5,13 @@ import React, { useState } from 'react';
 
 import { Combobox } from '@/components';
 import { getPaperFileType, PAPER_KIND_LABELS, type PaperKind } from '@/features/papers/data';
-import type { AdminDepartment, AdminUpload } from './data';
+import type { AdminDepartment, AdminFolder, AdminUpload } from './data';
 import type { UpdateUploadInput } from './api';
 
 interface AdminUploadRowProps {
   upload: AdminUpload;
   departments: AdminDepartment[];
+  folders: AdminFolder[];
   busy: boolean;
   onApprove?: () => void;
   onReject?: () => void;
@@ -24,6 +25,7 @@ interface AdminUploadRowProps {
 export function AdminUploadRow({
   upload,
   departments,
+  folders,
   busy,
   onApprove,
   onReject,
@@ -39,6 +41,7 @@ export function AdminUploadRow({
   const [departmentId, setDepartmentId] = useState(upload.departmentId ?? '');
   const [year, setYear] = useState(upload.year?.toString() ?? '');
   const [kind, setKind] = useState<PaperKind>(upload.kind);
+  const [folderId, setFolderId] = useState(upload.folderId ?? '');
 
   const startEdit = () => {
     setTitle(upload.title);
@@ -46,6 +49,7 @@ export function AdminUploadRow({
     setDepartmentId(upload.departmentId ?? '');
     setYear(upload.year?.toString() ?? '');
     setKind(upload.kind);
+    setFolderId(upload.folderId ?? '');
     setSaveError(null);
     setEditing(true);
   };
@@ -60,6 +64,7 @@ export function AdminUploadRow({
         departmentId: departmentId || null,
         year: year ? Number(year) : null,
         kind,
+        folderId: folderId || null,
       });
       setEditing(false);
     } catch (err) {
@@ -106,13 +111,25 @@ export function AdminUploadRow({
               className="h-10 rounded-lg border border-line bg-background px-2 text-sm text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
             />
           </div>
-          <input
-            value={year}
-            onChange={(e) => setYear(e.target.value.replace(/[^0-9]/g, ''))}
-            placeholder="Year"
-            inputMode="numeric"
-            className="h-10 w-32 rounded-lg border border-line bg-background px-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              value={year}
+              onChange={(e) => setYear(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="Year"
+              inputMode="numeric"
+              className="h-10 w-32 rounded-lg border border-line bg-background px-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+            />
+            <Combobox
+              value={folderId}
+              onChange={setFolderId}
+              options={[
+                { value: '', label: 'Uncategorized' },
+                ...folders.map((f) => ({ value: f.id, label: f.name })),
+              ]}
+              placeholder="Folder"
+              className="h-10 rounded-lg border border-line bg-background px-2 text-sm text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+            />
+          </div>
           {saveError && <p className="text-xs text-red-500">{saveError}</p>}
           <div className="flex gap-2 pt-1">
             <button
@@ -142,7 +159,8 @@ export function AdminUploadRow({
               <p className="font-semibold text-foreground dark:text-foreground-dark">{upload.title}</p>
               <p className="text-xs text-muted dark:text-muted-dark">
                 {upload.subject} · {PAPER_KIND_LABELS[upload.kind]} · {upload.department ?? 'General'}
-                {upload.year ? ` · ${upload.year}` : ''} · {upload.createdAt}
+                {upload.year ? ` · ${upload.year}` : ''} · {upload.folder ?? 'Uncategorized'} ·{' '}
+                {upload.createdAt}
               </p>
             </div>
             <div className="flex shrink-0 gap-2">
