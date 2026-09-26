@@ -3,14 +3,17 @@
 import {
   AlertTriangle,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Download,
-  ExternalLink,
+  Eye,
   FileText,
   Image as ImageIcon,
   LogIn,
   MessageCircle,
   Search as SearchIcon,
   UploadCloud,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -36,6 +39,8 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
   const [search, setSearch] = useState('');
   const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [kind, setKind] = useState<'All' | 'past_paper' | 'notes'>('All');
+  const [previewPaper, setPreviewPaper] = useState<Paper | null>(null);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const loginHref = '/login?redirect=/papers';
   const uploadHref = '/papers/upload';
   const isFiltered = Boolean(search.trim() || departmentId || kind !== 'All');
@@ -93,6 +98,30 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
       );
     });
   }, [papers, search, departmentId, kind, departments]);
+
+  const openPreview = (paper: Paper, index: number) => {
+    setPreviewPaper(paper);
+    setPreviewIndex(index);
+  };
+  const closePreview = () => setPreviewPaper(null);
+  const previewFiles = previewPaper
+    ? previewPaper.fileUrls.length > 0
+      ? previewPaper.fileUrls
+      : [previewPaper.fileUrl]
+    : [];
+
+  useEffect(() => {
+    if (!previewPaper) return;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closePreview();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [previewPaper]);
 
   const heroCopy = isAuthenticated
     ? 'Browse approved papers, download files, or upload useful study resources for other NED students.'
@@ -272,15 +301,14 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
 
                           {files.length <= 1 ? (
                             <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
-                              <a
-                                href={files[0]}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                type="button"
+                                onClick={() => openPreview(paper, 0)}
                                 className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-line text-sm font-semibold text-foreground dark:border-line-dark dark:text-foreground-dark"
                               >
-                                <ExternalLink size={15} />
+                                <Eye size={15} />
                                 View
-                              </a>
+                              </button>
                               <a
                                 href={buildDownloadUrl(
                                   files[0],
@@ -300,15 +328,14 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
                               </p>
                               {files.map((url, fileIndex) => (
                                 <div key={url} className="flex items-center gap-1.5">
-                                  <a
-                                    href={url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                  <button
+                                    type="button"
+                                    onClick={() => openPreview(paper, fileIndex)}
                                     className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-line text-xs font-semibold text-foreground dark:border-line-dark dark:text-foreground-dark"
                                   >
-                                    <ExternalLink size={13} />
+                                    <Eye size={13} />
                                     Page {fileIndex + 1}
-                                  </a>
+                                  </button>
                                   <a
                                     href={buildDownloadUrl(
                                       url,
@@ -336,6 +363,96 @@ export function PaperBrowser({ papers: initialPapers, departments, error }: Pape
           </div>
         )}
       </section>
+
+      {previewPaper && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={closePreview}
+        >
+          <div
+            className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-card dark:bg-card-dark"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4 dark:border-line-dark">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-foreground dark:text-foreground-dark">
+                  {previewPaper.title}
+                </p>
+                {previewFiles.length > 1 && (
+                  <p className="text-xs text-muted dark:text-muted-dark">
+                    Page {previewIndex + 1} of {previewFiles.length}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={closePreview}
+                aria-label="Close preview"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-foreground dark:border-line-dark dark:text-foreground-dark"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-background dark:bg-background-dark">
+              {getPaperFileType(previewFiles[previewIndex]) === 'image' ? (
+                // eslint-disable-next-line @next/next/no-img-element -- previewing an arbitrary uploaded file at full resolution, not worth Next/Image's static-size config here
+                <img
+                  src={previewFiles[previewIndex]}
+                  alt={`${previewPaper.title} page ${previewIndex + 1}`}
+                  className="w-full"
+                />
+              ) : (
+                <iframe
+                  src={previewFiles[previewIndex]}
+                  title={`${previewPaper.title} page ${previewIndex + 1}`}
+                  className="h-[75vh] w-full"
+                />
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-4 dark:border-line-dark">
+              {previewFiles.length > 1 ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
+                    disabled={previewIndex === 0}
+                    className="inline-flex h-9 items-center gap-1 rounded-lg border border-line px-3 text-sm font-semibold text-foreground disabled:opacity-40 dark:border-line-dark dark:text-foreground-dark"
+                  >
+                    <ChevronLeft size={15} />
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewIndex((i) => Math.min(previewFiles.length - 1, i + 1))}
+                    disabled={previewIndex >= previewFiles.length - 1}
+                    className="inline-flex h-9 items-center gap-1 rounded-lg border border-line px-3 text-sm font-semibold text-foreground disabled:opacity-40 dark:border-line-dark dark:text-foreground-dark"
+                  >
+                    Next
+                    <ChevronRight size={15} />
+                  </button>
+                </div>
+              ) : (
+                <span />
+              )}
+              <a
+                href={buildDownloadUrl(
+                  previewFiles[previewIndex],
+                  `${previewPaper.title}${previewFiles.length > 1 ? `-page-${previewIndex + 1}` : ''}.${
+                    previewFiles[previewIndex].split('?')[0].split('.').pop() ?? 'pdf'
+                  }`,
+                )}
+                download
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold text-white"
+              >
+                <Download size={14} />
+                Download
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }
