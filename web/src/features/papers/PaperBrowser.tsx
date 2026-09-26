@@ -1,32 +1,15 @@
 'use client';
 
-import {
-  AlertTriangle,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  Eye,
-  FileText,
-  Folder,
-  FolderOpen,
-  Image as ImageIcon,
-  type LucideIcon,
-  LogIn,
-  MessageCircle,
-  RotateCw,
-  Search as SearchIcon,
-  UploadCloud,
-  X,
-} from 'lucide-react';
+import { AlertTriangle, CalendarDays, ChevronRight, FileText, Folder, LogIn, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { AnimatedListItem, Chip, Combobox, PageShell, SearchBar, StateMessage } from '@/components';
+import { PageShell, SearchBar, StateMessage } from '@/components';
 import type { Department } from '@/features/departments/types';
 import { useAuthStore } from '@/store/authStore';
 import { fetchPapers } from './api';
-import { PAPER_KIND_LABELS, buildDownloadUrl, getPaperFileType, type Paper, type PaperFolder } from './data';
+import type { Paper, PaperFolder } from './data';
+import { PaperListSection } from './PaperListSection';
 
 interface PaperBrowserProps {
   papers: Paper[];
@@ -35,40 +18,57 @@ interface PaperBrowserProps {
   error?: string | null;
 }
 
-/** Sentinel folderId value for "papers with no folder assigned yet" — never
- *  a real paper_folders.id, so it can share the folderId filter state. */
-const UNCATEGORIZED_FOLDER_ID = '__uncategorized__';
-
-/** One row in the "browse by subject" list — shows the count up front so a
- *  student never taps into an empty folder to find out. Styled as a plain
- *  list (like a directory), not cards, so it stays compact and scannable
- *  even once there are dozens of subjects. */
-function FolderRow({
-  icon: Icon,
-  label,
+/** One folder in the "browse by subject" list, styled like the paper cards
+ *  below it (same icon-box + title + meta-row shape) so folders and papers
+ *  read as one visual system, just linking to that folder's own page
+ *  instead of a view/download action. */
+function FolderCard({
+  href,
+  name,
   count,
-  onPress,
+  department,
+  latestDate,
 }: {
-  icon: LucideIcon;
-  label: string;
+  href: string;
+  name: string;
   count: number;
-  onPress: () => void;
+  department: string | null;
+  latestDate: string | null;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onPress}
-      className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-line/40 dark:hover:bg-line-dark/40"
+    <Link
+      href={href}
+      className="grid gap-4 rounded-2xl border border-line bg-card p-4 transition-colors hover:border-accent/40 dark:border-line-dark dark:bg-card-dark lg:grid-cols-[140px_minmax(0,1fr)_44px] lg:items-center"
     >
-      <span className="flex min-w-0 items-center gap-3">
-        <Icon size={17} className="shrink-0 text-accent" />
-        <span className="truncate font-semibold text-foreground dark:text-foreground-dark">{label}</span>
-      </span>
-      <span className="flex shrink-0 items-center gap-2 text-sm text-muted dark:text-muted-dark">
-        {count} {count === 1 ? 'paper' : 'papers'}
-        <ChevronRight size={16} />
-      </span>
-    </button>
+      <div className="flex h-32 items-center justify-center rounded-xl border border-line bg-background dark:border-line-dark dark:bg-background-dark lg:h-28">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10">
+          <Folder size={26} className="text-accent" />
+        </div>
+      </div>
+
+      <div className="min-w-0">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-accent">
+            {count} {count === 1 ? 'paper' : 'papers'}
+          </span>
+        </div>
+        <h2 className="text-lg font-bold text-foreground dark:text-foreground-dark">{name}</h2>
+        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted dark:text-muted-dark">
+          <span className="inline-flex items-center gap-2">
+            <FileText size={14} className="text-accent" />
+            {department ?? 'General'}
+          </span>
+          {latestDate && (
+            <span className="inline-flex items-center gap-2">
+              <CalendarDays size={14} className="text-accent" />
+              Latest: {latestDate}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <ChevronRight size={20} className="hidden shrink-0 text-muted dark:text-muted-dark lg:block" />
+    </Link>
   );
 }
 
@@ -78,15 +78,9 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
   const [papers, setPapers] = useState(initialPapers);
   const [refreshState, setRefreshState] = useState<'idle' | 'loading' | 'settled'>('idle');
   const [clientError, setClientError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [departmentId, setDepartmentId] = useState<string | null>(null);
-  const [folderId, setFolderId] = useState<string | null>(null);
-  const [kind, setKind] = useState<'All' | 'past_paper' | 'notes'>('All');
-  const [previewPaper, setPreviewPaper] = useState<Paper | null>(null);
-  const [previewIndex, setPreviewIndex] = useState(0);
+  const [folderSearch, setFolderSearch] = useState('');
   const loginHref = '/login?redirect=/papers';
   const uploadHref = '/papers/upload';
-  const isFiltered = Boolean(search.trim() || departmentId || folderId || kind !== 'All');
   const visibleError = clientError ?? error;
   // The papers array always starts from the server-rendered `initialPapers`
   // (never undefined), so there's always something real to show — including
@@ -125,101 +119,32 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
     };
   }, [hasHydrated, isAuthenticated, papers.length]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return papers.filter((p) => {
-      if (kind !== 'All' && p.kind !== kind) return false;
-      if (departmentId) {
-        const dept = departments.find((d) => d.id === departmentId);
-        if (dept && p.department !== dept.name) return false;
-      }
-      if (folderId === UNCATEGORIZED_FOLDER_ID) {
-        if (p.folderId !== null) return false;
-      } else if (folderId && p.folderId !== folderId) {
-        return false;
-      }
-      if (!q) return true;
-      return (
-        p.title.toLowerCase().includes(q) ||
-        p.subject.toLowerCase().includes(q) ||
-        (p.department ?? '').toLowerCase().includes(q)
-      );
-    });
-  }, [papers, search, departmentId, folderId, kind, departments]);
-
-  /** Paper counts per folder, shown on the folder cards below so a student
-   *  knows what's inside before tapping in — never has to guess or open an
-   *  empty folder. */
-  const folderCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    let uncategorized = 0;
+  /** Per-folder count/department/latest-date, plus the uncategorized bucket
+   *  that shows directly in the main listing below instead of behind a
+   *  folder click. `papers` is already sorted newest-first by the API, so
+   *  each folder's first match is its most recent paper — no separate sort
+   *  needed. Department is taken from that same first paper: folders are
+   *  subject-specific in practice, so its papers share one department. */
+  const { folderMeta, uncategorizedPapers } = useMemo(() => {
+    const meta = new Map<string, { count: number; department: string | null; latestDate: string }>();
+    const uncategorized: Paper[] = [];
     for (const p of papers) {
-      if (p.folderId) counts.set(p.folderId, (counts.get(p.folderId) ?? 0) + 1);
-      else uncategorized += 1;
+      if (!p.folderId) {
+        uncategorized.push(p);
+        continue;
+      }
+      const existing = meta.get(p.folderId);
+      if (existing) existing.count += 1;
+      else meta.set(p.folderId, { count: 1, department: p.department, latestDate: p.createdAt });
     }
-    return { counts, uncategorized };
+    return { folderMeta: meta, uncategorizedPapers: uncategorized };
   }, [papers]);
 
-  const selectedFolderName =
-    folderId === UNCATEGORIZED_FOLDER_ID
-      ? 'Uncategorized'
-      : (folders.find((f) => f.id === folderId)?.name ?? null);
-
-  // Selecting a folder reflects in the URL (?folder=<id>) so it's a real,
-  // shareable/back-button-able link, without needing a separate route —
-  // this component already owns the filtering, it just now also owns the
-  // query string. Plain history APIs (not next/navigation's router) keep
-  // this a client-only concern and avoid opting the page into dynamic
-  // rendering just to read a search param.
-  useEffect(() => {
-    const applyFromUrl = () => {
-      const params = new URLSearchParams(window.location.search);
-      setFolderId(params.get('folder'));
-    };
-    applyFromUrl();
-    window.addEventListener('popstate', applyFromUrl);
-    return () => window.removeEventListener('popstate', applyFromUrl);
-  }, []);
-
-  const selectFolder = (id: string | null) => {
-    setFolderId(id);
-    const url = new URL(window.location.href);
-    if (id) url.searchParams.set('folder', id);
-    else url.searchParams.delete('folder');
-    window.history.pushState(null, '', url);
-  };
-
-  const openPreview = (paper: Paper, index: number) => {
-    setPreviewPaper(paper);
-    setPreviewIndex(index);
-  };
-  const closePreview = () => setPreviewPaper(null);
-  const previewFiles = previewPaper
-    ? previewPaper.fileUrls.length > 0
-      ? previewPaper.fileUrls
-      : [previewPaper.fileUrl]
-    : [];
-  const [rotation, setRotation] = useState(0);
-
-  useEffect(() => {
-    if (!previewPaper) return;
-    document.body.style.overflow = 'hidden';
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closePreview();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [previewPaper]);
-
-  // Rotation is a display-only fix for a crooked scan — it never touches the
-  // stored file, so it resets whenever a different page or paper is opened.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional, resets the rotation once a different page/paper is actually open
-    setRotation(0);
-  }, [previewPaper, previewIndex]);
+  const visibleFolders = useMemo(() => {
+    const q = folderSearch.trim().toLowerCase();
+    if (!q) return folders;
+    return folders.filter((f) => f.name.toLowerCase().includes(q));
+  }, [folders, folderSearch]);
 
   const heroCopy = isAuthenticated
     ? 'Browse approved papers, download files, or upload useful study resources for other NED students.'
@@ -283,350 +208,77 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
 
         {hasHydrated && !isAuthenticated ? null : (
           <div className="p-5 sm:p-7 lg:p-9">
-            {folders.length > 0 &&
-              (folderId === null ? (
-                <div className="mb-6">
-                  <p className="mb-3 text-sm font-semibold text-foreground dark:text-foreground-dark">
+            {visibleError && (
+              <div className="mb-8">
+                <StateMessage icon={AlertTriangle} title="Couldn't load papers" subtitle={visibleError} />
+              </div>
+            )}
+            {!visibleError && folders.length > 0 && (
+              <div className="mb-8">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-foreground dark:text-foreground-dark">
                     Browse by subject
                   </p>
-                  <div className="max-h-96 divide-y divide-line overflow-y-auto rounded-2xl border border-line bg-card dark:divide-line-dark dark:border-line-dark dark:bg-card-dark">
-                    {folders.map((folder) => (
-                      <FolderRow
-                        key={folder.id}
-                        icon={Folder}
-                        label={folder.name}
-                        count={folderCounts.counts.get(folder.id) ?? 0}
-                        onPress={() => selectFolder(folder.id)}
+                  {folders.length > 6 && (
+                    <div className="w-full sm:w-64">
+                      <SearchBar
+                        value={folderSearch}
+                        onChangeText={setFolderSearch}
+                        placeholder="Search subjects..."
                       />
-                    ))}
-                    {folderCounts.uncategorized > 0 && (
-                      <FolderRow
-                        icon={FolderOpen}
-                        label="Uncategorized"
-                        count={folderCounts.uncategorized}
-                        onPress={() => selectFolder(UNCATEGORIZED_FOLDER_ID)}
-                      />
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-6 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => selectFolder(null)}
-                    className="inline-flex items-center gap-1 text-sm font-semibold text-accent"
-                  >
-                    <ChevronLeft size={16} />
-                    All subjects
-                  </button>
-                  <span className="text-muted dark:text-muted-dark">/</span>
-                  <span className="text-sm font-semibold text-foreground dark:text-foreground-dark">
-                    {selectedFolderName}
-                  </span>
-                  <span className="text-sm text-muted dark:text-muted-dark">
-                    ({filtered.length} {filtered.length === 1 ? 'paper' : 'papers'})
-                  </span>
-                </div>
-              ))}
-
-            <div className="rounded-2xl border border-line bg-background p-4 dark:border-line-dark dark:bg-background-dark">
-              <div className="grid gap-3 lg:grid-cols-[minmax(280px,1fr)_260px]">
-                <SearchBar
-                  value={search}
-                  onChangeText={setSearch}
-                  placeholder="Search papers, subjects..."
-                />
-                <label className="sr-only" htmlFor="paper-department">
-                  Department
-                </label>
-                <Combobox
-                  id="paper-department"
-                  value={departmentId ?? ''}
-                  onChange={(v) => setDepartmentId(v || null)}
-                  options={[
-                    { value: '', label: 'All departments' },
-                    ...departments.map((department) => ({ value: department.id, label: department.name })),
-                  ]}
-                  className="h-12 rounded-full border border-line bg-card px-4 text-sm text-foreground focus:border-accent dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
-                />
-              </div>
-
-              <div className="mt-4 flex flex-wrap">
-                <Chip label="All" selected={kind === 'All'} onPress={() => setKind('All')} />
-                <Chip
-                  label="Past Papers"
-                  selected={kind === 'past_paper'}
-                  onPress={() => setKind('past_paper')}
-                />
-                <Chip label="Notes" selected={kind === 'notes'} onPress={() => setKind('notes')} />
-              </div>
-            </div>
-
-            <div className="mt-6">
-              {!visibleError && (folderId === null || search.trim()) && (
-                <p className="mb-3 text-sm text-muted dark:text-muted-dark">
-                  Showing {filtered.length} {filtered.length === 1 ? 'paper' : 'papers'}
-                  {search.trim() ? ` matching "${search.trim()}"` : ''}
-                </p>
-              )}
-              {visibleError ? (
-                <StateMessage icon={AlertTriangle} title="Couldn't load papers" subtitle={visibleError} />
-              ) : filtered.length === 0 ? (
-                <div className="rounded-2xl border border-line bg-card p-8 text-center dark:border-line-dark dark:bg-card-dark">
-                  <StateMessage
-                    icon={SearchIcon}
-                    title={papers.length === 0 ? 'No approved papers yet' : 'No matching papers'}
-                    subtitle={
-                      papers.length === 0
-                        ? 'Uploaded papers appear here after admin approval.'
-                        : isFiltered
-                          ? 'Try a different search or filter.'
-                          : 'Approved papers will show here.'
-                    }
-                  />
-                  {hasHydrated && (
-                    <Link
-                      href={uploadHref}
-                      className="mt-5 inline-flex rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white"
-                    >
-                      Upload the first paper
-                    </Link>
+                    </div>
                   )}
                 </div>
-              ) : (
-                <div className="grid gap-4">
-                  {filtered.map((paper, index) => {
-                    const files = paper.fileUrls.length > 0 ? paper.fileUrls : [paper.fileUrl];
-                    const fileType = getPaperFileType(files[0]);
-                    return (
-                      <AnimatedListItem key={paper.id} index={index}>
-                        <article className="grid gap-4 rounded-2xl border border-line bg-card p-4 dark:border-line-dark dark:bg-card-dark lg:grid-cols-[140px_minmax(0,1fr)_220px] lg:items-center">
-                          <div className="flex h-32 items-center justify-center rounded-xl border border-line bg-background dark:border-line-dark dark:bg-background-dark lg:h-28">
-                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10">
-                              {fileType === 'pdf' ? (
-                                <FileText size={26} className="text-accent" />
-                              ) : (
-                                <ImageIcon size={26} className="text-accent" />
-                              )}
-                            </div>
-                          </div>
+                {visibleFolders.length === 0 ? (
+                  <p className="rounded-2xl border border-line bg-card p-6 text-center text-sm text-muted dark:border-line-dark dark:bg-card-dark dark:text-muted-dark">
+                    No subjects match &quot;{folderSearch.trim()}&quot;.
+                  </p>
+                ) : (
+                  <div className="grid gap-3">
+                    {visibleFolders.map((folder) => {
+                      const meta = folderMeta.get(folder.id);
+                      return (
+                        <FolderCard
+                          key={folder.id}
+                          href={`/papers/folder/${folder.id}`}
+                          name={folder.name}
+                          count={meta?.count ?? 0}
+                          department={meta?.department ?? null}
+                          latestDate={meta?.latestDate ?? null}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
-                          <div className="min-w-0">
-                            <div className="mb-2 flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-accent">
-                                {PAPER_KIND_LABELS[paper.kind]}
-                              </span>
-                              {paper.year && (
-                                <span className="rounded-full border border-line px-2.5 py-1 text-xs font-semibold text-foreground dark:border-line-dark dark:text-foreground-dark">
-                                  {paper.year}
-                                </span>
-                              )}
-                              {paper.folderName && (
-                                <span className="rounded-full border border-accent/30 bg-accent/5 px-2.5 py-1 text-xs font-semibold text-accent">
-                                  {paper.folderName}
-                                </span>
-                              )}
-                            </div>
-                            <h2 className="text-lg font-bold text-foreground dark:text-foreground-dark">
-                              {paper.title}
-                            </h2>
-                            <p className="mt-1 text-sm leading-6 text-muted dark:text-muted-dark">
-                              {paper.subject}
-                            </p>
-                            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted dark:text-muted-dark">
-                              <span className="inline-flex items-center gap-2">
-                                <FileText size={14} className="text-accent" />
-                                {paper.department ?? 'General'}
-                              </span>
-                              <span className="inline-flex items-center gap-2">
-                                <CalendarDays size={14} className="text-accent" />
-                                Uploaded by {paper.uploaderName} on {paper.createdAt}
-                              </span>
-                            </div>
-                            <Link
-                              href={`/papers/${paper.id}/questions?title=${encodeURIComponent(paper.title)}`}
-                              className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-2 py-1 text-xs font-medium text-accent"
-                            >
-                              <MessageCircle size={12} />
-                              {paper.questionCount > 0
-                                ? `${paper.questionCount} question${paper.questionCount === 1 ? '' : 's'}`
-                                : 'Ask a question'}
-                            </Link>
-                          </div>
-
-                          {files.length <= 1 ? (
-                            <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
-                              <button
-                                type="button"
-                                onClick={() => openPreview(paper, 0)}
-                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-line text-sm font-semibold text-foreground dark:border-line-dark dark:text-foreground-dark"
-                              >
-                                <Eye size={15} />
-                                View
-                              </button>
-                              <a
-                                href={buildDownloadUrl(
-                                  files[0],
-                                  `${paper.title}.${files[0].split('?')[0].split('.').pop() ?? 'pdf'}`,
-                                )}
-                                download
-                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent text-sm font-semibold text-white"
-                              >
-                                <Download size={15} />
-                                Download
-                              </a>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col gap-1.5">
-                              <p className="text-xs font-semibold text-muted dark:text-muted-dark">
-                                {files.length} pages
-                              </p>
-                              {files.map((url, fileIndex) => (
-                                <div key={url} className="flex items-center gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => openPreview(paper, fileIndex)}
-                                    className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-line text-xs font-semibold text-foreground dark:border-line-dark dark:text-foreground-dark"
-                                  >
-                                    <Eye size={13} />
-                                    Page {fileIndex + 1}
-                                  </button>
-                                  <a
-                                    href={buildDownloadUrl(
-                                      url,
-                                      `${paper.title}-page-${fileIndex + 1}.${
-                                        url.split('?')[0].split('.').pop() ?? 'pdf'
-                                      }`,
-                                    )}
-                                    download
-                                    aria-label={`Download page ${fileIndex + 1}`}
-                                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-white"
-                                  >
-                                    <Download size={13} />
-                                  </a>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </article>
-                      </AnimatedListItem>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            {!visibleError && (
+              <>
+                <p className="mb-3 text-sm font-semibold text-foreground dark:text-foreground-dark">
+                  {folders.length > 0 ? 'Uncategorized papers' : 'All papers'}
+                </p>
+                <PaperListSection
+                  papers={uncategorizedPapers}
+                  departments={departments}
+                  showFolderBadge={false}
+                  emptyTitle={
+                    folders.length > 0 && uncategorizedPapers.length === 0
+                      ? 'Nothing uncategorized'
+                      : 'No approved papers yet'
+                  }
+                  emptySubtitle={
+                    folders.length > 0 && uncategorizedPapers.length === 0
+                      ? 'Every approved paper is already sorted into a subject above.'
+                      : 'Uploaded papers appear here after admin approval.'
+                  }
+                  uploadHref={uploadHref}
+                />
+              </>
+            )}
           </div>
         )}
       </section>
-
-      {previewPaper && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2 backdrop-blur-sm sm:p-6"
-          onClick={closePreview}
-        >
-          <div
-            className="flex h-full w-full flex-col overflow-hidden rounded-2xl bg-card shadow-2xl sm:h-[92vh] sm:w-[92vw] sm:max-w-6xl dark:bg-card-dark"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-6 sm:py-4 dark:border-line-dark">
-              <div className="min-w-0">
-                <p className="truncate text-base font-semibold text-foreground dark:text-foreground-dark">
-                  {previewPaper.title}
-                </p>
-                {previewFiles.length > 1 && (
-                  <p className="text-xs text-muted dark:text-muted-dark">
-                    Page {previewIndex + 1} of {previewFiles.length}
-                  </p>
-                )}
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {getPaperFileType(previewFiles[previewIndex]) === 'image' && (
-                  <button
-                    type="button"
-                    onClick={() => setRotation((r) => (r + 90) % 360)}
-                    aria-label="Rotate image 90 degrees"
-                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line px-3 text-sm font-medium text-foreground dark:border-line-dark dark:text-foreground-dark"
-                  >
-                    <RotateCw size={15} />
-                    <span className="hidden sm:inline">Rotate</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={closePreview}
-                  aria-label="Close preview"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-foreground dark:border-line-dark dark:text-foreground-dark"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-1 items-center justify-center overflow-hidden bg-background p-2 sm:p-6 dark:bg-background-dark">
-              {getPaperFileType(previewFiles[previewIndex]) === 'image' ? (
-                // eslint-disable-next-line @next/next/no-img-element -- previewing an arbitrary uploaded file at full resolution, not worth Next/Image's static-size config here
-                <img
-                  src={previewFiles[previewIndex]}
-                  alt={`${previewPaper.title} page ${previewIndex + 1}`}
-                  style={{
-                    transform: `rotate(${rotation}deg)`,
-                    transition: 'transform 0.2s ease',
-                    maxWidth: rotation % 180 !== 0 ? '75vh' : '100%',
-                    maxHeight: rotation % 180 !== 0 ? '82vw' : '100%',
-                  }}
-                  className="rounded-lg object-contain"
-                />
-              ) : (
-                <iframe
-                  src={previewFiles[previewIndex]}
-                  title={`${previewPaper.title} page ${previewIndex + 1}`}
-                  className="h-full w-full rounded-lg"
-                />
-              )}
-            </div>
-
-            <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 sm:px-6 sm:py-4 dark:border-line-dark">
-              {previewFiles.length > 1 ? (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
-                    disabled={previewIndex === 0}
-                    className="inline-flex h-9 items-center gap-1 rounded-full border border-line px-3 text-sm font-semibold text-foreground disabled:opacity-40 dark:border-line-dark dark:text-foreground-dark"
-                  >
-                    <ChevronLeft size={15} />
-                    <span className="hidden sm:inline">Previous</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewIndex((i) => Math.min(previewFiles.length - 1, i + 1))}
-                    disabled={previewIndex >= previewFiles.length - 1}
-                    className="inline-flex h-9 items-center gap-1 rounded-full border border-line px-3 text-sm font-semibold text-foreground disabled:opacity-40 dark:border-line-dark dark:text-foreground-dark"
-                  >
-                    <span className="hidden sm:inline">Next</span>
-                    <ChevronRight size={15} />
-                  </button>
-                </div>
-              ) : (
-                <span />
-              )}
-              <a
-                href={buildDownloadUrl(
-                  previewFiles[previewIndex],
-                  `${previewPaper.title}${previewFiles.length > 1 ? `-page-${previewIndex + 1}` : ''}.${
-                    previewFiles[previewIndex].split('?')[0].split('.').pop() ?? 'pdf'
-                  }`,
-                )}
-                download
-                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-white"
-              >
-                <Download size={14} />
-                Download
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
     </PageShell>
   );
 }
