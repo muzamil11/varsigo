@@ -40,39 +40,39 @@ const KIND_OPTIONS: { value: 'All' | PaperKind; label: string }[] = [
   { value: 'notes', label: 'Notes' },
 ];
 
-/** One "browse by subject" tile — shows the count up front so a student
- *  never taps into an empty folder to find out. */
-function FolderTile({
+/** One row in the "browse by subject" list — shows the count up front so a
+ *  student never taps into an empty folder to find out. Styled as a plain
+ *  list (like a directory), not cards, so it stays compact and scannable
+ *  even once there are dozens of subjects. */
+function FolderRow({
   icon,
   label,
   count,
-  selected,
   onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   count: number;
-  selected: boolean;
   onPress: () => void;
 }) {
   const colors = useThemeColors();
   return (
-    <Pressable
-      onPress={onPress}
-      className={`w-28 rounded-2xl border px-3 py-3 ${
-        selected ? 'border-accent bg-accent/10' : 'border-line bg-card dark:border-line-dark dark:bg-card-dark'
-      }`}
-    >
-      <Ionicons name={icon} size={18} color={selected ? colors.accent : colors.textMuted} />
-      <Text
-        numberOfLines={1}
-        className={`mt-2 text-sm font-semibold ${selected ? 'text-accent' : 'text-foreground dark:text-foreground-dark'}`}
-      >
-        {label}
-      </Text>
-      <Text className="text-xs text-muted dark:text-muted-dark">
-        {count} {count === 1 ? 'paper' : 'papers'}
-      </Text>
+    <Pressable onPress={onPress} className="flex-row items-center justify-between px-4 py-3.5">
+      <View className="mr-3 flex-1 flex-row items-center gap-3">
+        <Ionicons name={icon} size={18} color={colors.accent} />
+        <Text
+          numberOfLines={1}
+          className="flex-1 text-base font-semibold text-foreground dark:text-foreground-dark"
+        >
+          {label}
+        </Text>
+      </View>
+      <View className="flex-row items-center gap-1.5">
+        <Text className="text-sm text-muted dark:text-muted-dark">
+          {count} {count === 1 ? 'paper' : 'papers'}
+        </Text>
+        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+      </View>
     </Pressable>
   );
 }
@@ -251,46 +251,52 @@ export default function PapersScreen() {
         </View>
       </View>
 
-      {folders.length > 0 && (
-        <View className="mt-3">
-          <Text className="mb-2 px-4 text-xs font-semibold text-muted dark:text-muted-dark">
-            Browse by subject
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
-            keyboardShouldPersistTaps="handled"
-          >
-            <FolderTile
-              icon="grid-outline"
-              label="All papers"
-              count={papers.length}
-              selected={selectedFolder.id === 'all'}
+      {folders.length > 0 &&
+        (selectedFolder.id === 'all' ? (
+          <View className="mt-3 px-4">
+            <Text className="mb-2 text-xs font-semibold text-muted dark:text-muted-dark">
+              Browse by subject
+            </Text>
+            <View className="max-h-72 divide-y divide-line rounded-2xl border border-line bg-card dark:divide-line-dark dark:border-line-dark dark:bg-card-dark">
+              <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                {folders.map((folder) => (
+                  <FolderRow
+                    key={folder.id}
+                    icon="folder-outline"
+                    label={folder.name}
+                    count={folderCounts.counts.get(folder.id) ?? 0}
+                    onPress={() => setSelectedFolder(folder)}
+                  />
+                ))}
+                {folderCounts.uncategorized > 0 && (
+                  <FolderRow
+                    icon="folder-open-outline"
+                    label="Uncategorized"
+                    count={folderCounts.uncategorized}
+                    onPress={() => setSelectedFolder(UNCATEGORIZED_FOLDER)}
+                  />
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        ) : (
+          <View className="mt-3 flex-row flex-wrap items-center gap-1.5 px-4">
+            <Pressable
               onPress={() => setSelectedFolder(ALL_FOLDERS)}
-            />
-            {folders.map((folder) => (
-              <FolderTile
-                key={folder.id}
-                icon="folder-outline"
-                label={folder.name}
-                count={folderCounts.counts.get(folder.id) ?? 0}
-                selected={selectedFolder.id === folder.id}
-                onPress={() => setSelectedFolder(folder)}
-              />
-            ))}
-            {folderCounts.uncategorized > 0 && (
-              <FolderTile
-                icon="folder-open-outline"
-                label="Uncategorized"
-                count={folderCounts.uncategorized}
-                selected={selectedFolder.id === 'uncategorized'}
-                onPress={() => setSelectedFolder(UNCATEGORIZED_FOLDER)}
-              />
-            )}
-          </ScrollView>
-        </View>
-      )}
+              className="flex-row items-center gap-1"
+            >
+              <Ionicons name="chevron-back" size={16} color={colors.accent} />
+              <Text className="text-sm font-semibold text-accent">All subjects</Text>
+            </Pressable>
+            <Text className="text-muted dark:text-muted-dark">/</Text>
+            <Text className="text-sm font-semibold text-foreground dark:text-foreground-dark">
+              {selectedFolder.name}
+            </Text>
+            <Text className="text-sm text-muted dark:text-muted-dark">
+              ({filtered.length} {filtered.length === 1 ? 'paper' : 'papers'})
+            </Text>
+          </View>
+        ))}
 
       <View className="mt-3 px-4">
         <Pressable
@@ -357,11 +363,12 @@ export default function PapersScreen() {
           onRefresh={() => load(true)}
           ItemSeparatorComponent={() => <View className="mb-3 h-px bg-line dark:bg-line-dark" />}
           ListHeaderComponent={
-            <Text className="mb-3 text-sm text-muted dark:text-muted-dark">
-              Showing {filtered.length} {filtered.length === 1 ? 'paper' : 'papers'}
-              {selectedFolder.id !== 'all' ? ` in "${selectedFolder.name}"` : ''}
-              {query.trim() ? ` matching "${query.trim()}"` : ''}
-            </Text>
+            (selectedFolder.id === 'all' || query.trim()) ? (
+              <Text className="mb-3 text-sm text-muted dark:text-muted-dark">
+                Showing {filtered.length} {filtered.length === 1 ? 'paper' : 'papers'}
+                {query.trim() ? ` matching "${query.trim()}"` : ''}
+              </Text>
+            ) : null
           }
           renderItem={({ item, index }) => (
             <AnimatedListItem index={index}>

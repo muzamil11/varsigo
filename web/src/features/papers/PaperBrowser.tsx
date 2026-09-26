@@ -11,7 +11,6 @@ import {
   Folder,
   FolderOpen,
   Image as ImageIcon,
-  LayoutGrid,
   type LucideIcon,
   LogIn,
   MessageCircle,
@@ -40,40 +39,35 @@ interface PaperBrowserProps {
  *  a real paper_folders.id, so it can share the folderId filter state. */
 const UNCATEGORIZED_FOLDER_ID = '__uncategorized__';
 
-/** One "browse by subject" tile — shows the count up front so a student
- *  never taps into an empty folder to find out. */
-function FolderTile({
+/** One row in the "browse by subject" list — shows the count up front so a
+ *  student never taps into an empty folder to find out. Styled as a plain
+ *  list (like a directory), not cards, so it stays compact and scannable
+ *  even once there are dozens of subjects. */
+function FolderRow({
   icon: Icon,
   label,
   count,
-  selected,
   onPress,
 }: {
   icon: LucideIcon;
   label: string;
   count: number;
-  selected: boolean;
   onPress: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onPress}
-      className={`rounded-2xl border p-3.5 text-left transition-transform duration-150 active:scale-[0.97] ${
-        selected
-          ? 'border-accent bg-accent/10'
-          : 'border-line bg-card hover:border-accent/40 dark:border-line-dark dark:bg-card-dark'
-      }`}
+      className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-line/40 dark:hover:bg-line-dark/40"
     >
-      <Icon size={18} className={selected ? 'text-accent' : 'text-muted dark:text-muted-dark'} />
-      <p
-        className={`mt-2 truncate text-sm font-semibold ${selected ? 'text-accent' : 'text-foreground dark:text-foreground-dark'}`}
-      >
-        {label}
-      </p>
-      <p className="text-xs text-muted dark:text-muted-dark">
+      <span className="flex min-w-0 items-center gap-3">
+        <Icon size={17} className="shrink-0 text-accent" />
+        <span className="truncate font-semibold text-foreground dark:text-foreground-dark">{label}</span>
+      </span>
+      <span className="flex shrink-0 items-center gap-2 text-sm text-muted dark:text-muted-dark">
         {count} {count === 1 ? 'paper' : 'papers'}
-      </p>
+        <ChevronRight size={16} />
+      </span>
     </button>
   );
 }
@@ -171,6 +165,30 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
       ? 'Uncategorized'
       : (folders.find((f) => f.id === folderId)?.name ?? null);
 
+  // Selecting a folder reflects in the URL (?folder=<id>) so it's a real,
+  // shareable/back-button-able link, without needing a separate route —
+  // this component already owns the filtering, it just now also owns the
+  // query string. Plain history APIs (not next/navigation's router) keep
+  // this a client-only concern and avoid opting the page into dynamic
+  // rendering just to read a search param.
+  useEffect(() => {
+    const applyFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      setFolderId(params.get('folder'));
+    };
+    applyFromUrl();
+    window.addEventListener('popstate', applyFromUrl);
+    return () => window.removeEventListener('popstate', applyFromUrl);
+  }, []);
+
+  const selectFolder = (id: string | null) => {
+    setFolderId(id);
+    const url = new URL(window.location.href);
+    if (id) url.searchParams.set('folder', id);
+    else url.searchParams.delete('folder');
+    window.history.pushState(null, '', url);
+  };
+
   const openPreview = (paper: Paper, index: number) => {
     setPreviewPaper(paper);
     setPreviewIndex(index);
@@ -265,41 +283,51 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
 
         {hasHydrated && !isAuthenticated ? null : (
           <div className="p-5 sm:p-7 lg:p-9">
-            {folders.length > 0 && (
-              <div className="mb-6">
-                <p className="mb-3 text-sm font-semibold text-foreground dark:text-foreground-dark">
-                  Browse by subject
-                </p>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                  <FolderTile
-                    icon={LayoutGrid}
-                    label="All papers"
-                    count={papers.length}
-                    selected={folderId === null}
-                    onPress={() => setFolderId(null)}
-                  />
-                  {folders.map((folder) => (
-                    <FolderTile
-                      key={folder.id}
-                      icon={Folder}
-                      label={folder.name}
-                      count={folderCounts.counts.get(folder.id) ?? 0}
-                      selected={folderId === folder.id}
-                      onPress={() => setFolderId(folder.id)}
-                    />
-                  ))}
-                  {folderCounts.uncategorized > 0 && (
-                    <FolderTile
-                      icon={FolderOpen}
-                      label="Uncategorized"
-                      count={folderCounts.uncategorized}
-                      selected={folderId === UNCATEGORIZED_FOLDER_ID}
-                      onPress={() => setFolderId(UNCATEGORIZED_FOLDER_ID)}
-                    />
-                  )}
+            {folders.length > 0 &&
+              (folderId === null ? (
+                <div className="mb-6">
+                  <p className="mb-3 text-sm font-semibold text-foreground dark:text-foreground-dark">
+                    Browse by subject
+                  </p>
+                  <div className="max-h-96 divide-y divide-line overflow-y-auto rounded-2xl border border-line bg-card dark:divide-line-dark dark:border-line-dark dark:bg-card-dark">
+                    {folders.map((folder) => (
+                      <FolderRow
+                        key={folder.id}
+                        icon={Folder}
+                        label={folder.name}
+                        count={folderCounts.counts.get(folder.id) ?? 0}
+                        onPress={() => selectFolder(folder.id)}
+                      />
+                    ))}
+                    {folderCounts.uncategorized > 0 && (
+                      <FolderRow
+                        icon={FolderOpen}
+                        label="Uncategorized"
+                        count={folderCounts.uncategorized}
+                        onPress={() => selectFolder(UNCATEGORIZED_FOLDER_ID)}
+                      />
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="mb-6 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => selectFolder(null)}
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-accent"
+                  >
+                    <ChevronLeft size={16} />
+                    All subjects
+                  </button>
+                  <span className="text-muted dark:text-muted-dark">/</span>
+                  <span className="text-sm font-semibold text-foreground dark:text-foreground-dark">
+                    {selectedFolderName}
+                  </span>
+                  <span className="text-sm text-muted dark:text-muted-dark">
+                    ({filtered.length} {filtered.length === 1 ? 'paper' : 'papers'})
+                  </span>
+                </div>
+              ))}
 
             <div className="rounded-2xl border border-line bg-background p-4 dark:border-line-dark dark:bg-background-dark">
               <div className="grid gap-3 lg:grid-cols-[minmax(280px,1fr)_260px]">
@@ -335,10 +363,9 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
             </div>
 
             <div className="mt-6">
-              {!visibleError && (
+              {!visibleError && (folderId === null || search.trim()) && (
                 <p className="mb-3 text-sm text-muted dark:text-muted-dark">
                   Showing {filtered.length} {filtered.length === 1 ? 'paper' : 'papers'}
-                  {selectedFolderName ? ` in "${selectedFolderName}"` : ''}
                   {search.trim() ? ` matching "${search.trim()}"` : ''}
                 </p>
               )}
