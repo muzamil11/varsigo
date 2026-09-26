@@ -30,12 +30,52 @@ import { useThemeColors } from '@/store/themeStore';
 
 const ALL_DEPARTMENTS: Department = { id: 'all', name: 'All' };
 const ALL_FOLDERS: PaperFolder = { id: 'all', name: 'All' };
+/** Sentinel for "papers with no folder assigned yet" — never a real
+ *  paper_folders.id, so it can share the same selectedFolder state. */
+const UNCATEGORIZED_FOLDER: PaperFolder = { id: 'uncategorized', name: 'Uncategorized' };
 
 const KIND_OPTIONS: { value: 'All' | PaperKind; label: string }[] = [
   { value: 'All', label: 'All' },
   { value: 'past_paper', label: 'Past Paper' },
   { value: 'notes', label: 'Notes' },
 ];
+
+/** One "browse by subject" tile — shows the count up front so a student
+ *  never taps into an empty folder to find out. */
+function FolderTile({
+  icon,
+  label,
+  count,
+  selected,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  count: number;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const colors = useThemeColors();
+  return (
+    <Pressable
+      onPress={onPress}
+      className={`w-28 rounded-2xl border px-3 py-3 ${
+        selected ? 'border-accent bg-accent/10' : 'border-line bg-card dark:border-line-dark dark:bg-card-dark'
+      }`}
+    >
+      <Ionicons name={icon} size={18} color={selected ? colors.accent : colors.textMuted} />
+      <Text
+        numberOfLines={1}
+        className={`mt-2 text-sm font-semibold ${selected ? 'text-accent' : 'text-foreground dark:text-foreground-dark'}`}
+      >
+        {label}
+      </Text>
+      <Text className="text-xs text-muted dark:text-muted-dark">
+        {count} {count === 1 ? 'paper' : 'papers'}
+      </Text>
+    </Pressable>
+  );
+}
 
 export default function PapersScreen() {
   const router = useRouter();
@@ -58,7 +98,6 @@ export default function PapersScreen() {
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewRotation, setPreviewRotation] = useState(0);
   const [departmentPickerOpen, setDepartmentPickerOpen] = useState(false);
-  const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const hasLoaded = useRef(false);
 
   const load = useCallback(async (isRefresh = false) => {
@@ -71,7 +110,6 @@ export default function PapersScreen() {
         fetchPaperFolders(),
         fetchPapers({
           departmentId: selectedDept.id === 'all' ? undefined : selectedDept.id,
-          folderId: selectedFolder.id === 'all' ? undefined : selectedFolder.id,
           year: year === 'All' ? undefined : Number(year),
           kind: kind === 'All' ? undefined : kind,
         }),
@@ -85,7 +123,9 @@ export default function PapersScreen() {
     } finally {
       shouldShowSkeleton ? setLoading(false) : setRefreshing(false);
     }
-  }, [selectedDept.id, selectedFolder.id, year, kind]);
+    // Folder filtering happens client-side below (see `filtered`) so the
+    // full set stays around to compute each folder's paper count.
+  }, [selectedDept.id, year, kind]);
 
   useFocusEffect(
     useCallback(() => {
@@ -95,11 +135,27 @@ export default function PapersScreen() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return papers;
-    return papers.filter(
-      (p) => p.title.toLowerCase().includes(q) || p.subject.toLowerCase().includes(q),
-    );
-  }, [papers, query]);
+    return papers.filter((p) => {
+      if (selectedFolder.id === 'uncategorized' && p.folderId !== null) return false;
+      if (selectedFolder.id !== 'all' && selectedFolder.id !== 'uncategorized' && p.folderId !== selectedFolder.id) {
+        return false;
+      }
+      if (!q) return true;
+      return p.title.toLowerCase().includes(q) || p.subject.toLowerCase().includes(q);
+    });
+  }, [papers, query, selectedFolder.id]);
+
+  /** Paper counts per folder for the "browse by subject" row below — a
+   *  student can see what's inside before tapping in. */
+  const folderCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    let uncategorized = 0;
+    for (const p of papers) {
+      if (p.folderId) counts.set(p.folderId, (counts.get(p.folderId) ?? 0) + 1);
+      else uncategorized += 1;
+    }
+    return { counts, uncategorized };
+  }, [papers]);
 
   const downloadToCache = async (url: string, title: string, onProgress?: (ratio: number) => void) => {
     const ext = url.split('?')[0].split('.').pop()?.toLowerCase() || 'pdf';
@@ -195,27 +251,56 @@ export default function PapersScreen() {
         </View>
       </View>
 
-      <View className="mt-3 flex-row gap-2 px-4">
+      {folders.length > 0 && (
+        <View className="mt-3">
+          <Text className="mb-2 px-4 text-xs font-semibold text-muted dark:text-muted-dark">
+            Browse by subject
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <FolderTile
+              icon="grid-outline"
+              label="All papers"
+              count={papers.length}
+              selected={selectedFolder.id === 'all'}
+              onPress={() => setSelectedFolder(ALL_FOLDERS)}
+            />
+            {folders.map((folder) => (
+              <FolderTile
+                key={folder.id}
+                icon="folder-outline"
+                label={folder.name}
+                count={folderCounts.counts.get(folder.id) ?? 0}
+                selected={selectedFolder.id === folder.id}
+                onPress={() => setSelectedFolder(folder)}
+              />
+            ))}
+            {folderCounts.uncategorized > 0 && (
+              <FolderTile
+                icon="folder-open-outline"
+                label="Uncategorized"
+                count={folderCounts.uncategorized}
+                selected={selectedFolder.id === 'uncategorized'}
+                onPress={() => setSelectedFolder(UNCATEGORIZED_FOLDER)}
+              />
+            )}
+          </ScrollView>
+        </View>
+      )}
+
+      <View className="mt-3 px-4">
         <Pressable
           onPress={() => setDepartmentPickerOpen(true)}
-          className="flex-1 flex-row items-center justify-between rounded-2xl border border-line bg-card px-4 py-3 dark:border-line-dark dark:bg-card-dark"
+          className="flex-row items-center justify-between rounded-2xl border border-line bg-card px-4 py-3 dark:border-line-dark dark:bg-card-dark"
         >
           <View>
             <Text className="text-xs text-muted dark:text-muted-dark">Department</Text>
             <Text className="mt-1 text-sm font-semibold text-foreground dark:text-foreground-dark">
               {selectedDept.name}
-            </Text>
-          </View>
-          <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
-        </Pressable>
-        <Pressable
-          onPress={() => setFolderPickerOpen(true)}
-          className="flex-1 flex-row items-center justify-between rounded-2xl border border-line bg-card px-4 py-3 dark:border-line-dark dark:bg-card-dark"
-        >
-          <View>
-            <Text className="text-xs text-muted dark:text-muted-dark">Folder</Text>
-            <Text className="mt-1 text-sm font-semibold text-foreground dark:text-foreground-dark">
-              {selectedFolder.name}
             </Text>
           </View>
           <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
@@ -271,6 +356,13 @@ export default function PapersScreen() {
           refreshing={refreshing}
           onRefresh={() => load(true)}
           ItemSeparatorComponent={() => <View className="mb-3 h-px bg-line dark:bg-line-dark" />}
+          ListHeaderComponent={
+            <Text className="mb-3 text-sm text-muted dark:text-muted-dark">
+              Showing {filtered.length} {filtered.length === 1 ? 'paper' : 'papers'}
+              {selectedFolder.id !== 'all' ? ` in "${selectedFolder.name}"` : ''}
+              {query.trim() ? ` matching "${query.trim()}"` : ''}
+            </Text>
+          }
           renderItem={({ item, index }) => (
             <AnimatedListItem index={index}>
               <PaperCard
@@ -292,7 +384,7 @@ export default function PapersScreen() {
               icon="document-text-outline"
               title="No files found"
               subtitle={
-                query
+                query || selectedFolder.id !== 'all'
                   ? 'Try a different search term or filter.'
                   : 'Be the first to upload a paper or notes.'
               }
@@ -420,53 +512,6 @@ export default function PapersScreen() {
         </Pressable>
       </Modal>
 
-      <Modal
-        visible={folderPickerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setFolderPickerOpen(false)}
-      >
-        <Pressable
-          className="flex-1 justify-end bg-black/50"
-          onPress={() => setFolderPickerOpen(false)}
-        >
-          <Pressable className="max-h-[70%] rounded-t-3xl bg-card p-4 dark:bg-card-dark">
-            <View className="mb-3 flex-row items-center justify-between">
-              <Text className="text-lg font-bold text-foreground dark:text-foreground-dark">
-                Select folder
-              </Text>
-              <Pressable
-                onPress={() => setFolderPickerOpen(false)}
-                hitSlop={8}
-                className="h-9 w-9 items-center justify-center rounded-full border border-line dark:border-line-dark"
-              >
-                <Ionicons name="close" size={18} color={colors.text} />
-              </Pressable>
-            </View>
-            <FlatList
-              data={[ALL_FOLDERS, ...folders]}
-              keyExtractor={(folder) => folder.id}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <Pressable
-                  onPress={() => {
-                    setSelectedFolder(item);
-                    setFolderPickerOpen(false);
-                  }}
-                  className="flex-row items-center justify-between rounded-xl px-3 py-3"
-                >
-                  <Text className="text-base text-foreground dark:text-foreground-dark">
-                    {item.name}
-                  </Text>
-                  {selectedFolder.id === item.id && (
-                    <Ionicons name="checkmark" size={18} color={colors.accent} />
-                  )}
-                </Pressable>
-              )}
-            />
-          </Pressable>
-        </Pressable>
-      </Modal>
     </Screen>
   );
 }

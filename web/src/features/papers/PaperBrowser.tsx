@@ -8,7 +8,11 @@ import {
   Download,
   Eye,
   FileText,
+  Folder,
+  FolderOpen,
   Image as ImageIcon,
+  LayoutGrid,
+  type LucideIcon,
   LogIn,
   MessageCircle,
   RotateCw,
@@ -30,6 +34,48 @@ interface PaperBrowserProps {
   departments: Department[];
   folders: PaperFolder[];
   error?: string | null;
+}
+
+/** Sentinel folderId value for "papers with no folder assigned yet" — never
+ *  a real paper_folders.id, so it can share the folderId filter state. */
+const UNCATEGORIZED_FOLDER_ID = '__uncategorized__';
+
+/** One "browse by subject" tile — shows the count up front so a student
+ *  never taps into an empty folder to find out. */
+function FolderTile({
+  icon: Icon,
+  label,
+  count,
+  selected,
+  onPress,
+}: {
+  icon: LucideIcon;
+  label: string;
+  count: number;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPress}
+      className={`rounded-2xl border p-3.5 text-left transition-transform duration-150 active:scale-[0.97] ${
+        selected
+          ? 'border-accent bg-accent/10'
+          : 'border-line bg-card hover:border-accent/40 dark:border-line-dark dark:bg-card-dark'
+      }`}
+    >
+      <Icon size={18} className={selected ? 'text-accent' : 'text-muted dark:text-muted-dark'} />
+      <p
+        className={`mt-2 truncate text-sm font-semibold ${selected ? 'text-accent' : 'text-foreground dark:text-foreground-dark'}`}
+      >
+        {label}
+      </p>
+      <p className="text-xs text-muted dark:text-muted-dark">
+        {count} {count === 1 ? 'paper' : 'papers'}
+      </p>
+    </button>
+  );
 }
 
 export function PaperBrowser({ papers: initialPapers, departments, folders, error }: PaperBrowserProps) {
@@ -93,7 +139,11 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
         const dept = departments.find((d) => d.id === departmentId);
         if (dept && p.department !== dept.name) return false;
       }
-      if (folderId && p.folderId !== folderId) return false;
+      if (folderId === UNCATEGORIZED_FOLDER_ID) {
+        if (p.folderId !== null) return false;
+      } else if (folderId && p.folderId !== folderId) {
+        return false;
+      }
       if (!q) return true;
       return (
         p.title.toLowerCase().includes(q) ||
@@ -102,6 +152,24 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
       );
     });
   }, [papers, search, departmentId, folderId, kind, departments]);
+
+  /** Paper counts per folder, shown on the folder cards below so a student
+   *  knows what's inside before tapping in — never has to guess or open an
+   *  empty folder. */
+  const folderCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    let uncategorized = 0;
+    for (const p of papers) {
+      if (p.folderId) counts.set(p.folderId, (counts.get(p.folderId) ?? 0) + 1);
+      else uncategorized += 1;
+    }
+    return { counts, uncategorized };
+  }, [papers]);
+
+  const selectedFolderName =
+    folderId === UNCATEGORIZED_FOLDER_ID
+      ? 'Uncategorized'
+      : (folders.find((f) => f.id === folderId)?.name ?? null);
 
   const openPreview = (paper: Paper, index: number) => {
     setPreviewPaper(paper);
@@ -197,8 +265,44 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
 
         {hasHydrated && !isAuthenticated ? null : (
           <div className="p-5 sm:p-7 lg:p-9">
+            {folders.length > 0 && (
+              <div className="mb-6">
+                <p className="mb-3 text-sm font-semibold text-foreground dark:text-foreground-dark">
+                  Browse by subject
+                </p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                  <FolderTile
+                    icon={LayoutGrid}
+                    label="All papers"
+                    count={papers.length}
+                    selected={folderId === null}
+                    onPress={() => setFolderId(null)}
+                  />
+                  {folders.map((folder) => (
+                    <FolderTile
+                      key={folder.id}
+                      icon={Folder}
+                      label={folder.name}
+                      count={folderCounts.counts.get(folder.id) ?? 0}
+                      selected={folderId === folder.id}
+                      onPress={() => setFolderId(folder.id)}
+                    />
+                  ))}
+                  {folderCounts.uncategorized > 0 && (
+                    <FolderTile
+                      icon={FolderOpen}
+                      label="Uncategorized"
+                      count={folderCounts.uncategorized}
+                      selected={folderId === UNCATEGORIZED_FOLDER_ID}
+                      onPress={() => setFolderId(UNCATEGORIZED_FOLDER_ID)}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="rounded-2xl border border-line bg-background p-4 dark:border-line-dark dark:bg-background-dark">
-              <div className="grid gap-3 lg:grid-cols-[minmax(240px,1fr)_200px_200px]">
+              <div className="grid gap-3 lg:grid-cols-[minmax(280px,1fr)_260px]">
                 <SearchBar
                   value={search}
                   onChangeText={setSearch}
@@ -217,19 +321,6 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
                   ]}
                   className="h-12 rounded-full border border-line bg-card px-4 text-sm text-foreground focus:border-accent dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
                 />
-                <label className="sr-only" htmlFor="paper-folder">
-                  Folder
-                </label>
-                <Combobox
-                  id="paper-folder"
-                  value={folderId ?? ''}
-                  onChange={(v) => setFolderId(v || null)}
-                  options={[
-                    { value: '', label: 'All folders' },
-                    ...folders.map((folder) => ({ value: folder.id, label: folder.name })),
-                  ]}
-                  className="h-12 rounded-full border border-line bg-card px-4 text-sm text-foreground focus:border-accent dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
-                />
               </div>
 
               <div className="mt-4 flex flex-wrap">
@@ -241,23 +332,16 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
                 />
                 <Chip label="Notes" selected={kind === 'notes'} onPress={() => setKind('notes')} />
               </div>
-
-              {folders.length > 0 && (
-                <div className="mt-2 flex flex-wrap">
-                  <Chip label="All subjects" selected={folderId === null} onPress={() => setFolderId(null)} />
-                  {folders.map((folder) => (
-                    <Chip
-                      key={folder.id}
-                      label={folder.name}
-                      selected={folderId === folder.id}
-                      onPress={() => setFolderId(folder.id)}
-                    />
-                  ))}
-                </div>
-              )}
             </div>
 
             <div className="mt-6">
+              {!visibleError && (
+                <p className="mb-3 text-sm text-muted dark:text-muted-dark">
+                  Showing {filtered.length} {filtered.length === 1 ? 'paper' : 'papers'}
+                  {selectedFolderName ? ` in "${selectedFolderName}"` : ''}
+                  {search.trim() ? ` matching "${search.trim()}"` : ''}
+                </p>
+              )}
               {visibleError ? (
                 <StateMessage icon={AlertTriangle} title="Couldn't load papers" subtitle={visibleError} />
               ) : filtered.length === 0 ? (
