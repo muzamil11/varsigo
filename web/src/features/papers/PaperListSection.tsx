@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { AnimatedListItem, Chip, Combobox, SearchBar, StateMessage } from '@/components';
 import type { Department } from '@/features/departments/types';
@@ -270,15 +271,15 @@ export function PaperListSection({
         )}
       </div>
 
-      {previewPaper && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2 backdrop-blur-sm sm:p-6"
-          onClick={closePreview}
-        >
-          <div
-            className="flex h-full w-full flex-col overflow-hidden rounded-2xl bg-card shadow-2xl sm:h-[92vh] sm:w-[92vw] sm:max-w-6xl dark:bg-card-dark"
-            onClick={(e) => e.stopPropagation()}
-          >
+      {previewPaper &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          // Portaled straight to <body> — rendered from inside the page's
+          // normal layout tree, a plain `fixed inset-0` here would still
+          // only ever cover this component's nearest positioned/transformed
+          // ancestor's box, not the real viewport, leaving the site header
+          // and footer visible around it. A portal sidesteps that entirely.
+          <div className="fixed inset-0 z-50 flex flex-col bg-card dark:bg-card-dark">
             <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-6 sm:py-4 dark:border-line-dark">
               <div className="min-w-0">
                 <p className="truncate text-base font-semibold text-foreground dark:text-foreground-dark">
@@ -375,9 +376,9 @@ export function PaperListSection({
                 Download
               </a>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
