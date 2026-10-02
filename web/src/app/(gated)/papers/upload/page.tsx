@@ -10,6 +10,7 @@ import {
   FileText,
   GraduationCap,
   Info,
+  Link2,
   Tags,
   UploadCloud,
 } from 'lucide-react';
@@ -19,12 +20,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Combobox, Screen } from '@/components';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
+import { suggestImportantLink } from '@/features/links/api';
 import { uploadPaper, validateUploadFiles } from '@/features/papers/api';
 import type { PaperKind } from '@/features/papers/data';
 import { formatFileSize } from '@/features/papers/data';
 import { useAuthStore } from '@/store/authStore';
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022'];
+
+type UploadMode = 'file' | 'link';
 
 const STEPS = [
   { label: 'Info', icon: Info },
@@ -82,6 +86,7 @@ export default function UploadPaperPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
 
+  const [mode, setMode] = useState<UploadMode>('file');
   const [step, setStep] = useState(0);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [title, setTitle] = useState('');
@@ -90,8 +95,29 @@ export default function UploadPaperPage() {
   const [year, setYear] = useState('');
   const [kind, setKind] = useState<PaperKind>('past_paper');
   const [files, setFiles] = useState<File[]>([]);
+  const [linkUrl, setLinkUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const linkValid = title.trim().length > 0 && subject.trim().length > 0 && linkUrl.trim().length > 0;
+
+  const handleSubmitLink = async () => {
+    if (!user || !linkValid) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await suggestImportantLink({
+        userId: user.id,
+        title: title.trim(),
+        url: linkUrl.trim(),
+        subtitle: subject.trim(),
+      });
+      router.push('/papers');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not submit link.');
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     fetchDepartments()
@@ -152,6 +178,122 @@ export default function UploadPaperPage() {
   return (
     <Screen>
       <div className="mx-auto max-w-3xl px-4 py-8">
+        <div className="mb-4 flex rounded-xl border border-line bg-card p-1 dark:border-line-dark dark:bg-card-dark">
+          <button
+            type="button"
+            onClick={() => setMode('file')}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-semibold ${
+              mode === 'file'
+                ? 'bg-accent text-white'
+                : 'text-muted dark:text-muted-dark'
+            }`}
+          >
+            <UploadCloud size={16} />
+            Upload a file
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('link')}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-semibold ${
+              mode === 'link'
+                ? 'bg-accent text-white'
+                : 'text-muted dark:text-muted-dark'
+            }`}
+          >
+            <Link2 size={16} />
+            Share a link
+          </button>
+        </div>
+
+        {mode === 'link' ? (
+          <div className="rounded-2xl border border-line bg-card dark:border-line-dark dark:bg-card-dark">
+            <div className="border-b border-line p-5 dark:border-line-dark">
+              <div className="flex items-center gap-3">
+                <Link2 size={22} className="text-accent" />
+                <div>
+                  <h1 className="text-xl font-bold text-foreground dark:text-foreground-dark">
+                    Share a Link
+                  </h1>
+                  <p className="text-sm text-muted dark:text-muted-dark">
+                    A Drive, Docs, or other link — shared after admin approval.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-5">
+              <div>
+                <div className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-foreground dark:text-foreground-dark">
+                  <FileText size={16} className="text-accent" />
+                  Title
+                </div>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Complete ANA Notes"
+                  className={fieldClass()}
+                />
+              </div>
+
+              <div>
+                <div className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-foreground dark:text-foreground-dark">
+                  <BookOpen size={16} className="text-accent" />
+                  Course or subject
+                </div>
+                <input
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="e.g. CT-504 Advanced Numerical Analysis"
+                  className={fieldClass()}
+                />
+                <p className="mt-1.5 text-xs text-muted dark:text-muted-dark">
+                  Helps admin sort this link under the right subject.
+                </p>
+              </div>
+
+              <div>
+                <div className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-foreground dark:text-foreground-dark">
+                  <Link2 size={16} className="text-accent" />
+                  Link URL
+                </div>
+                <input
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://drive.google.com/..."
+                  className={fieldClass()}
+                />
+              </div>
+
+              <div className="rounded-xl border border-accent/30 bg-accent/10 p-4 text-sm text-foreground dark:text-foreground-dark">
+                Every submitted link is private until an admin approves it.
+              </div>
+
+              {error && (
+                <p className="rounded-xl border border-line bg-background px-3 py-2 text-sm text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark">
+                  {error}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-line p-5 dark:border-line-dark">
+              <Button
+                label="Cancel"
+                variant="ghost"
+                onPress={() => router.push('/papers')}
+                className="h-11"
+              />
+              <button
+                type="button"
+                onClick={handleSubmitLink}
+                disabled={!linkValid || submitting}
+                className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-6 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-accent/40"
+              >
+                {submitting ? 'Submitting...' : 'Submit Link'}
+                {!submitting && <ChevronRight size={16} />}
+              </button>
+            </div>
+          </div>
+        ) : (
         <div className="rounded-2xl border border-line bg-card dark:border-line-dark dark:bg-card-dark">
           <div className="border-b border-line p-5 dark:border-line-dark">
             <div className="mb-5 flex items-center justify-between gap-4">
@@ -353,10 +495,13 @@ export default function UploadPaperPage() {
             )}
           </div>
         </div>
+        )}
 
         <div className="mt-4 flex items-start gap-2 rounded-xl border border-line bg-card p-4 text-sm text-muted dark:border-line-dark dark:bg-card-dark dark:text-muted-dark">
           <ChevronLeft size={16} className="mt-0.5 shrink-0 text-accent" />
-          You can go back at any step. Papers only appear publicly after approval.
+          {mode === 'file'
+            ? 'You can go back at any step. Papers only appear publicly after approval.'
+            : 'Links only appear publicly after admin approval.'}
         </div>
       </div>
     </Screen>

@@ -8,6 +8,9 @@ import React, { useEffect, useState } from 'react';
 import { CardSkeletonList, PageShell, Screen, StateMessage } from '@/components';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
+import { fetchFolderLinks } from '@/features/links/api';
+import type { ImportantLink } from '@/features/links/data';
+import { LinksGrid } from '@/features/links/LinksGrid';
 import { fetchPaperFolders, fetchPapers } from '@/features/papers/api';
 import type { Paper, PaperFolder } from '@/features/papers/data';
 import { PaperListSection } from '@/features/papers/PaperListSection';
@@ -22,6 +25,7 @@ export default function PaperFolderPage() {
   const [folder, setFolder] = useState<PaperFolder | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [links, setLinks] = useState<ImportantLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,12 +34,18 @@ export default function PaperFolderPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional load-on-mount
     setLoading(true);
     setError(null);
-    Promise.all([fetchPaperFolders(), fetchPapers({ folderId }), fetchDepartments()])
-      .then(([folders, folderPapers, departmentList]) => {
+    Promise.all([
+      fetchPaperFolders(),
+      fetchPapers({ folderId }),
+      fetchDepartments(),
+      fetchFolderLinks(folderId),
+    ])
+      .then(([folders, folderPapers, departmentList, folderLinks]) => {
         if (cancelled) return;
         setFolder(folders.find((f) => f.id === folderId) ?? null);
         setPapers(folderPapers);
         setDepartments(departmentList);
+        setLinks(folderLinks);
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load.');
@@ -84,6 +94,14 @@ export default function PaperFolderPage() {
                 </p>
               </div>
             </div>
+            {links.length > 0 && (
+              <div className="mb-6">
+                <p className="mb-3 text-sm font-semibold text-foreground dark:text-foreground-dark">
+                  Links
+                </p>
+                <LinksGrid links={links} />
+              </div>
+            )}
             <PaperListSection
               papers={papers}
               departments={departments}

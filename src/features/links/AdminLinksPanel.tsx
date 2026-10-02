@@ -2,17 +2,43 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { Button, Card, CardSkeletonList, StateMessage } from '@/components';
+import { Button, Card, CardSkeletonList, Chip, StateMessage } from '@/components';
+import { fetchPaperFolders } from '@/features/papers/api';
+import type { PaperFolder } from '@/features/papers/data';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeColors } from '@/store/themeStore';
 import {
   addImportantLink,
   approveImportantLink,
   deleteImportantLink,
-  fetchImportantLinks,
+  fetchAllImportantLinks,
   fetchPendingImportantLinks,
+  updateImportantLinkFolder,
 } from './api';
 import type { ImportantLink, PendingImportantLink } from './data';
+
+/** Small "General / <folder>..." chip row used on both the Add-Link form
+ *  and every link card so admin can assign/reassign which subject folder a
+ *  link belongs to — same two-step pattern as uploads.folder_id. */
+function FolderPicker({
+  folders,
+  folderId,
+  onChange,
+}: {
+  folders: PaperFolder[];
+  folderId: string | null;
+  onChange: (folderId: string | null) => void;
+}) {
+  if (folders.length === 0) return null;
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <Chip label="General" selected={folderId === null} onPress={() => onChange(null)} />
+      {folders.map((f) => (
+        <Chip key={f.id} label={f.name} selected={folderId === f.id} onPress={() => onChange(f.id)} />
+      ))}
+    </ScrollView>
+  );
+}
 
 /** Self-contained admin CRUD for the Home screen's "Important Links"
  *  section — fetches and manages its own state rather than threading
@@ -24,12 +50,14 @@ export function AdminLinksPanel() {
 
   const [links, setLinks] = useState<ImportantLink[]>([]);
   const [pending, setPending] = useState<PendingImportantLink[]>([]);
+  const [folders, setFolders] = useState<PaperFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [subtitle, setSubtitle] = useState('');
+  const [newFolderId, setNewFolderId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
@@ -37,12 +65,14 @@ export function AdminLinksPanel() {
     setLoading(true);
     setError(null);
     try {
-      const [approved, pendingRows] = await Promise.all([
-        fetchImportantLinks(),
+      const [approved, pendingRows, folderList] = await Promise.all([
+        fetchAllImportantLinks(adminEmail),
         fetchPendingImportantLinks(adminEmail),
+        fetchPaperFolders(),
       ]);
       setLinks(approved);
       setPending(pendingRows);
+      setFolders(folderList);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
@@ -65,15 +95,30 @@ export function AdminLinksPanel() {
         title: title.trim(),
         url: url.trim(),
         subtitle: subtitle.trim() || undefined,
+        folderId: newFolderId,
       });
       setTitle('');
       setUrl('');
       setSubtitle('');
+      setNewFolderId(null);
       await load();
     } catch (err) {
       Alert.alert('Could not add link', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleAssignFolder = async (linkId: string, folderId: string | null) => {
+    if (!adminEmail) return;
+    try {
+      await updateImportantLinkFolder(adminEmail, linkId, folderId);
+      await load();
+    } catch (err) {
+      Alert.alert(
+        'Could not update folder',
+        err instanceof Error ? err.message : 'Please try again.',
+      );
     }
   };
 
@@ -174,6 +219,12 @@ export function AdminLinksPanel() {
           placeholderTextColor={colors.textMuted}
           className="mb-3 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
         />
+        <Text className="mb-2 text-xs font-medium text-muted dark:text-muted-dark">
+          Subject folder (optional — General shows on Home)
+        </Text>
+        <View className="mb-3">
+          <FolderPicker folders={folders} folderId={newFolderId} onChange={setNewFolderId} />
+        </View>
         <Button label="Add Link" onPress={handleAdd} disabled={!isValid} loading={submitting} />
       </Card>
 
@@ -199,7 +250,16 @@ export function AdminLinksPanel() {
               </Pressable>
               <Text className="mt-1 text-xs text-muted dark:text-muted-dark">
                 Suggested by {link.submittedBy} · {link.createdAt}
+                {link.subtitle ? ` · ${link.subtitle}` : ''}
               </Text>
+              <Text className="mb-1 mt-3 text-xs font-medium text-muted dark:text-muted-dark">
+                Subject folder
+              </Text>
+              <FolderPicker
+                folders={folders}
+                folderId={link.folderId ?? null}
+                onChange={(folderId) => handleAssignFolder(link.id, folderId)}
+              />
               <View className="mt-3 flex-row gap-2">
                 <Button label="Approve" onPress={() => handleApprove(link)} className="h-9 flex-1" />
                 <Button
@@ -221,23 +281,42 @@ export function AdminLinksPanel() {
       </Text>
       {links.length > 0 ? (
         links.map((link) => (
-          <Card key={link.id} className="mb-3 flex-row items-center">
-            <View className="flex-1">
-              <Text className="text-base font-semibold text-foreground dark:text-foreground-dark">
-                {link.title}
-              </Text>
-              <Pressable
-                onPress={() => handleOpenLink(link.url)}
-                hitSlop={4}
-                className="mt-0.5 flex-row items-center"
-              >
-                <Text className="flex-1 text-xs text-accent" numberOfLines={1}>
-                  {link.url}
+          <Card key={link.id} className="mb-3">
+            <View className="flex-row items-center">
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-foreground dark:text-foreground-dark">
+                  {link.title}
                 </Text>
-                <Ionicons name="open-outline" size={14} color="#6366F1" />
-              </Pressable>
+                <Pressable
+                  onPress={() => handleOpenLink(link.url)}
+                  hitSlop={4}
+                  className="mt-0.5 flex-row items-center"
+                >
+                  <Text className="flex-1 text-xs text-accent" numberOfLines={1}>
+                    {link.url}
+                  </Text>
+                  <Ionicons name="open-outline" size={14} color="#6366F1" />
+                </Pressable>
+              </View>
+              <Button
+                label="Delete"
+                variant="ghost"
+                onPress={() => handleDelete(link)}
+                className="h-9 px-3"
+              />
             </View>
-            <Button label="Delete" variant="ghost" onPress={() => handleDelete(link)} className="h-9 px-3" />
+            {folders.length > 0 && (
+              <>
+                <Text className="mb-1 mt-3 text-xs font-medium text-muted dark:text-muted-dark">
+                  Subject folder
+                </Text>
+                <FolderPicker
+                  folders={folders}
+                  folderId={link.folderId ?? null}
+                  onChange={(folderId) => handleAssignFolder(link.id, folderId)}
+                />
+              </>
+            )}
           </Card>
         ))
       ) : (

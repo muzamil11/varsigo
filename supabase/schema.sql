@@ -533,6 +533,11 @@ create table if not exists important_links (
 
 alter table important_links add column if not exists user_id uuid references users(id) on delete set null;
 alter table important_links add column if not exists approved boolean default false;
+-- Optional subject-folder scoping (see paper_folders above): a link with
+-- folder_id set shows on that subject's Papers folder page instead of the
+-- Home screen's general Important Links list (fetchImportantLinks only
+-- ever queries folder_id is null; fetchFolderLinks queries a specific one).
+alter table important_links add column if not exists folder_id uuid references paper_folders(id) on delete set null;
 
 alter table important_links enable row level security;
 

@@ -6,6 +6,9 @@ import { Pressable, Text, View } from 'react-native';
 import { CardSkeletonList, Screen, StateMessage } from '@/components';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
+import { fetchFolderLinks } from '@/features/links/api';
+import type { ImportantLink } from '@/features/links/data';
+import { ImportantLinkCard } from '@/features/links/ImportantLinkCard';
 import { fetchPaperFolders, fetchPapers } from '@/features/papers/api';
 import type { Paper, PaperFolder } from '@/features/papers/data';
 import { PaperListSection } from '@/features/papers/PaperListSection';
@@ -22,6 +25,7 @@ export default function PaperFolderScreen() {
   const [folder, setFolder] = useState<PaperFolder | null>(null);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [links, setLinks] = useState<ImportantLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,14 +34,16 @@ export default function PaperFolderScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [folders, folderPapers, departmentList] = await Promise.all([
+      const [folders, folderPapers, departmentList, folderLinks] = await Promise.all([
         fetchPaperFolders(),
         fetchPapers({ folderId: id }),
         fetchDepartments(),
+        fetchFolderLinks(id),
       ]);
       setFolder(folders.find((f) => f.id === id) ?? null);
       setPapers(folderPapers);
       setDepartments(departmentList);
+      setLinks(folderLinks);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
@@ -81,13 +87,25 @@ export default function PaperFolderScreen() {
           subtitle="It may have been renamed or removed."
         />
       ) : (
-        <PaperListSection
-          papers={papers}
-          departments={departments}
-          searchPlaceholder={`Search in ${folder.name}…`}
-          emptyTitle="No papers yet"
-          emptySubtitle="Papers assigned to this subject will show here."
-        />
+        <>
+          {links.length > 0 && (
+            <View className="px-4 pt-3">
+              <Text className="mb-2 text-sm font-semibold text-foreground dark:text-foreground-dark">
+                Links
+              </Text>
+              {links.map((link) => (
+                <ImportantLinkCard key={link.id} link={link} />
+              ))}
+            </View>
+          )}
+          <PaperListSection
+            papers={papers}
+            departments={departments}
+            searchPlaceholder={`Search in ${folder.name}…`}
+            emptyTitle="No papers yet"
+            emptySubtitle="Papers assigned to this subject will show here."
+          />
+        </>
       )}
     </Screen>
   );

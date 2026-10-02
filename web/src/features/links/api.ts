@@ -20,16 +20,60 @@ function assertValidUrl(url: string) {
   }
 }
 
-/** Approved links only — what Home and the "Important Links" page show. */
+/** Approved, general (non-folder) links only — what Home and the "Important
+ *  Links" page show. Folder-scoped links are fetched separately via
+ *  fetchFolderLinks and shown on that subject's Papers folder page instead. */
 export async function fetchImportantLinks(): Promise<ImportantLink[]> {
   try {
     const { data, error } = await supabase
       .from('important_links')
       .select('id, title, subtitle, url')
       .eq('approved', true)
+      .is('folder_id', null)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data ?? []) as ImportantLink[];
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
+/** Approved links scoped to one subject folder — shown on that folder's
+ *  Papers page (e.g. a Drive link with lecture notes for that subject). */
+export async function fetchFolderLinks(folderId: string): Promise<ImportantLink[]> {
+  try {
+    const { data, error } = await supabase
+      .from('important_links')
+      .select('id, title, subtitle, url')
+      .eq('approved', true)
+      .eq('folder_id', folderId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as ImportantLink[];
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
+/** All approved links regardless of folder — used by the admin Links panel
+ *  so admin can see/manage both general and folder-scoped links in one
+ *  place (fetchImportantLinks itself stays general-only for Home). */
+export async function fetchAllImportantLinks(adminEmail: string): Promise<ImportantLink[]> {
+  assertAdmin(adminEmail);
+  try {
+    const { data, error } = await supabase
+      .from('important_links')
+      .select('id, title, subtitle, url, folder_id')
+      .eq('approved', true)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return ((data ?? []) as unknown as (ImportantLink & { folder_id: string | null })[]).map((row) => ({
+      id: row.id,
+      title: row.title,
+      subtitle: row.subtitle,
+      url: row.url,
+      folderId: row.folder_id,
+    }));
   } catch (error) {
     throw new Error(toFriendlyError(error));
   }
@@ -40,6 +84,7 @@ export interface AddImportantLinkInput {
   title: string;
   url: string;
   subtitle?: string;
+  folderId?: string | null;
 }
 
 /** Admin adding a link directly — goes live immediately, no approval step. */
@@ -52,6 +97,7 @@ export async function addImportantLink(input: AddImportantLinkInput): Promise<vo
       title: sanitizeText(input.title),
       subtitle: input.subtitle?.trim() ? sanitizeText(input.subtitle) : null,
       url,
+      folder_id: input.folderId ?? null,
       approved: true,
     });
     if (error) throw error;
@@ -65,10 +111,14 @@ export interface SuggestImportantLinkInput {
   title: string;
   url: string;
   subtitle?: string;
+  folderId?: string | null;
 }
 
-/** Any signed-in student can suggest a link (e.g. a class WhatsApp group) —
- *  inserted unapproved, only visible to admin until approved. */
+/** Any signed-in student can suggest a link (e.g. a class WhatsApp group, or
+ *  from the paper-upload screen's "share a link" mode) — inserted
+ *  unapproved, only visible to admin until approved. A student never picks
+ *  folderId directly; the upload screen only passes a subject hint via
+ *  subtitle, same as papers (folders are admin-assigned). */
 export async function suggestImportantLink(input: SuggestImportantLinkInput): Promise<void> {
   const url = input.url.trim();
   assertValidUrl(url);
@@ -79,6 +129,7 @@ export async function suggestImportantLink(input: SuggestImportantLinkInput): Pr
       subtitle: input.subtitle?.trim() ? sanitizeText(input.subtitle) : null,
       url,
       user_id: input.userId,
+      folder_id: input.folderId ?? null,
       approved: !importantLinksRequireApproval,
     });
     if (error) throw error;
@@ -92,6 +143,7 @@ interface RawPendingLinkRow {
   title: string;
   subtitle: string | null;
   url: string;
+  folder_id: string | null;
   created_at: string;
   users: { name: string | null; email: string | null } | null;
 }
@@ -101,7 +153,7 @@ export async function fetchPendingImportantLinks(adminEmail: string): Promise<Pe
   try {
     const { data, error } = await supabase
       .from('important_links')
-      .select('id, title, subtitle, url, created_at, users(name, email)')
+      .select('id, title, subtitle, url, folder_id, created_at, users(name, email)')
       .eq('approved', false)
       .order('created_at', { ascending: true });
     if (error) throw error;
@@ -110,6 +162,7 @@ export async function fetchPendingImportantLinks(adminEmail: string): Promise<Pe
       title: row.title,
       subtitle: row.subtitle,
       url: row.url,
+      folderId: row.folder_id,
       submittedBy: row.users?.name || row.users?.email || 'Unknown',
       createdAt: new Date(row.created_at).toLocaleDateString('en-GB', {
         day: 'numeric',
@@ -128,6 +181,26 @@ export async function approveImportantLink(adminEmail: string, linkId: string): 
     const { error } = await supabase
       .from('important_links')
       .update({ approved: true })
+      .eq('id', linkId);
+    if (error) throw error;
+  } catch (error) {
+    throw new Error(toFriendlyError(error));
+  }
+}
+
+/** Assigns (or clears, with folderId null) which subject folder a link
+ *  belongs to — used by admin to sort a pending/approved link onto its
+ *  Papers folder page, same two-step pattern as uploads.folder_id. */
+export async function updateImportantLinkFolder(
+  adminEmail: string,
+  linkId: string,
+  folderId: string | null,
+): Promise<void> {
+  assertAdmin(adminEmail);
+  try {
+    const { error } = await supabase
+      .from('important_links')
+      .update({ folder_id: folderId })
       .eq('id', linkId);
     if (error) throw error;
   } catch (error) {

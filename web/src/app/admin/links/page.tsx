@@ -3,35 +3,45 @@
 import { AlertTriangle, CheckCircle2, Trash2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
-import { Button, CardSkeletonList, StateMessage } from '@/components';
+import { Button, CardSkeletonList, Combobox, StateMessage } from '@/components';
 import {
   addImportantLink,
   approveImportantLink,
   deleteImportantLink,
-  fetchImportantLinks,
+  fetchAllImportantLinks,
   fetchPendingImportantLinks,
+  updateImportantLinkFolder,
 } from '@/features/links/api';
 import type { ImportantLink, PendingImportantLink } from '@/features/links/data';
+import { fetchPaperFolders } from '@/features/papers/api';
+import type { PaperFolder } from '@/features/papers/data';
 import { useAuthStore } from '@/store/authStore';
 
 export default function AdminLinksPage() {
   const user = useAuthStore((s) => s.user);
   const [links, setLinks] = useState<ImportantLink[]>([]);
   const [pending, setPending] = useState<PendingImportantLink[]>([]);
+  const [folders, setFolders] = useState<PaperFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [subtitle, setSubtitle] = useState('');
+  const [newFolderId, setNewFolderId] = useState('');
   const [adding, setAdding] = useState(false);
 
   const load = () => {
     if (!user?.email) return;
     setLoading(true);
-    Promise.all([fetchImportantLinks(), fetchPendingImportantLinks(user.email)])
-      .then(([approved, pendingRows]) => {
+    Promise.all([
+      fetchAllImportantLinks(user.email),
+      fetchPendingImportantLinks(user.email),
+      fetchPaperFolders(),
+    ])
+      .then(([approved, pendingRows, folderList]) => {
         setLinks(approved);
         setPending(pendingRows);
+        setFolders(folderList);
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load.'))
       .finally(() => setLoading(false));
@@ -39,6 +49,11 @@ export default function AdminLinksPage() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional load-on-mount
   useEffect(load, [user?.email]);
+
+  const folderOptions = [
+    { value: '', label: 'General (Home)' },
+    ...folders.map((f) => ({ value: f.id, label: f.name })),
+  ];
 
   const isValid = title.trim().length > 0 && url.trim().length > 0;
 
@@ -52,15 +67,27 @@ export default function AdminLinksPage() {
         title: title.trim(),
         url: url.trim(),
         subtitle: subtitle.trim() || undefined,
+        folderId: newFolderId || null,
       });
       setTitle('');
       setUrl('');
       setSubtitle('');
+      setNewFolderId('');
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add link.');
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleAssignFolder = async (linkId: string, folderId: string) => {
+    if (!user?.email) return;
+    try {
+      await updateImportantLinkFolder(user.email, linkId, folderId || null);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update folder.');
     }
   };
 
@@ -122,6 +149,15 @@ export default function AdminLinksPage() {
           className="h-11 rounded-lg border border-line bg-card px-3 text-sm text-foreground outline-none dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
         />
       </div>
+      <div className="mb-3 max-w-xs">
+        <Combobox
+          value={newFolderId}
+          onChange={setNewFolderId}
+          options={folderOptions}
+          searchable={false}
+          className="h-11 rounded-lg border border-line bg-card px-3 text-sm text-foreground dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
+        />
+      </div>
       <Button label="Add link" onPress={handleAdd} loading={adding} disabled={!isValid} className="mb-6" />
 
       {error && (
@@ -160,7 +196,17 @@ export default function AdminLinksPage() {
                     </a>
                     <p className="mt-0.5 text-xs text-muted dark:text-muted-dark">
                       Suggested by {link.submittedBy} · {link.createdAt}
+                      {link.subtitle ? ` · ${link.subtitle}` : ''}
                     </p>
+                    <div className="mt-2 max-w-xs">
+                      <Combobox
+                        value={link.folderId ?? ''}
+                        onChange={(folderId) => handleAssignFolder(link.id, folderId)}
+                        options={folderOptions}
+                        searchable={false}
+                        className="h-9 rounded-lg border border-line bg-background px-3 text-xs text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+                      />
+                    </div>
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <Button label="Approve" onPress={() => handleApprove(link.id)} className="h-9 px-3" />
@@ -187,7 +233,7 @@ export default function AdminLinksPage() {
                 key={link.id}
                 className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-line bg-card px-4 py-3 dark:border-line-dark dark:bg-card-dark"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground dark:text-foreground-dark">
                     {link.title}
                   </p>
@@ -199,6 +245,17 @@ export default function AdminLinksPage() {
                   >
                     {link.url}
                   </a>
+                  {folders.length > 0 && (
+                    <div className="mt-2 max-w-xs">
+                      <Combobox
+                        value={link.folderId ?? ''}
+                        onChange={(folderId) => handleAssignFolder(link.id, folderId)}
+                        options={folderOptions}
+                        searchable={false}
+                        className="h-9 rounded-lg border border-line bg-background px-3 text-xs text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+                      />
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"

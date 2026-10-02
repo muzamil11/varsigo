@@ -8,6 +8,7 @@ import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from 'reac
 import { Button, Card, Chip, Screen } from '@/components';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
+import { suggestImportantLink } from '@/features/links/api';
 import {
   MAX_IMAGE_BYTES,
   MAX_IMAGE_PAGES,
@@ -22,6 +23,8 @@ const KIND_OPTIONS: { value: PaperKind; label: string }[] = [
   { value: 'past_paper', label: 'Past Paper' },
   { value: 'notes', label: 'Notes' },
 ];
+
+type UploadMode = 'file' | 'link';
 
 const MAX_IMAGE_WIDTH = 1920;
 const IMAGE_COMPRESS_QUALITY = 0.7;
@@ -45,6 +48,7 @@ export default function UploadPaperScreen() {
   const router = useRouter();
   const colors = useThemeColors();
 
+  const [mode, setMode] = useState<UploadMode>('file');
   const [departments, setDepartments] = useState<Department[]>([]);
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
@@ -52,6 +56,7 @@ export default function UploadPaperScreen() {
   const [kind, setKind] = useState<PaperKind>('past_paper');
   const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [files, setFiles] = useState<PickedUploadFile[]>([]);
+  const [linkUrl, setLinkUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [processingFile, setProcessingFile] = useState(false);
 
@@ -120,7 +125,9 @@ export default function UploadPaperScreen() {
   };
 
   const isValid =
-    title.trim().length > 0 && subject.trim().length > 0 && files.length > 0 && !processingFile;
+    mode === 'file'
+      ? title.trim().length > 0 && subject.trim().length > 0 && files.length > 0 && !processingFile
+      : title.trim().length > 0 && subject.trim().length > 0 && linkUrl.trim().length > 0;
 
   const handleSubmit = async () => {
     const user = useAuthStore.getState().user;
@@ -130,6 +137,30 @@ export default function UploadPaperScreen() {
       ]);
       return;
     }
+
+    if (mode === 'link') {
+      if (!linkUrl.trim()) return;
+      setSubmitting(true);
+      try {
+        await suggestImportantLink({
+          userId: user.id,
+          title: title.trim(),
+          url: linkUrl.trim(),
+          subtitle: subject.trim(),
+        });
+        Alert.alert(
+          'Link received',
+          'Thanks. Your link is pending moderation and will appear once approved.',
+          [{ text: 'OK', onPress: () => router.back() }],
+        );
+      } catch (error) {
+        Alert.alert('Could not submit link', error instanceof Error ? error.message : 'Please try again.');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     if (files.length === 0) return;
 
     setSubmitting(true);
@@ -167,7 +198,7 @@ export default function UploadPaperScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <Text className="text-lg font-semibold text-foreground dark:text-foreground-dark">
-          Upload Paper or Notes
+          {mode === 'file' ? 'Upload Paper or Notes' : 'Share a Link'}
         </Text>
       </View>
 
@@ -177,12 +208,47 @@ export default function UploadPaperScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
+        <View className="mt-4 flex-row rounded-xl border border-line bg-card p-1 dark:border-line-dark dark:bg-card-dark">
+          <Pressable
+            onPress={() => setMode('file')}
+            className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-lg py-2.5 ${mode === 'file' ? 'bg-accent' : ''}`}
+          >
+            <Ionicons
+              name="cloud-upload-outline"
+              size={16}
+              color={mode === 'file' ? '#FFFFFF' : colors.textMuted}
+            />
+            <Text
+              className={`text-sm font-semibold ${mode === 'file' ? 'text-white' : 'text-muted dark:text-muted-dark'}`}
+            >
+              Upload a file
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setMode('link')}
+            className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-lg py-2.5 ${mode === 'link' ? 'bg-accent' : ''}`}
+          >
+            <Ionicons
+              name="link-outline"
+              size={16}
+              color={mode === 'link' ? '#FFFFFF' : colors.textMuted}
+            />
+            <Text
+              className={`text-sm font-semibold ${mode === 'link' ? 'text-white' : 'text-muted dark:text-muted-dark'}`}
+            >
+              Share a link
+            </Text>
+          </Pressable>
+        </View>
+
         <Card className="mt-4">
           <Text className="mb-2 text-sm font-medium text-muted dark:text-muted-dark">Title</Text>
           <TextInput
             value={title}
             onChangeText={setTitle}
-            placeholder="e.g. Operating Systems - Final Exam"
+            placeholder={
+              mode === 'file' ? 'e.g. Operating Systems - Final Exam' : 'e.g. Complete ANA Notes'
+            }
             placeholderTextColor={colors.textMuted}
             className="mb-4 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
           />
@@ -193,23 +259,52 @@ export default function UploadPaperScreen() {
             onChangeText={setSubject}
             placeholder="e.g. Operating Systems"
             placeholderTextColor={colors.textMuted}
-            className="mb-4 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+            className={mode === 'file' ? 'mb-4 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark' : 'h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark'}
           />
+          {mode === 'link' && (
+            <Text className="mt-2 text-xs text-muted dark:text-muted-dark">
+              Helps admin sort this link under the right subject.
+            </Text>
+          )}
 
-          <Text className="mb-2 text-sm font-medium text-muted dark:text-muted-dark">
-            Year (optional)
-          </Text>
-          <TextInput
-            value={year}
-            onChangeText={setYear}
-            placeholder="e.g. 2025"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
-            maxLength={4}
-            className="h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
-          />
+          {mode === 'file' && (
+            <>
+              <Text className="mb-2 text-sm font-medium text-muted dark:text-muted-dark">
+                Year (optional)
+              </Text>
+              <TextInput
+                value={year}
+                onChangeText={setYear}
+                placeholder="e.g. 2025"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="number-pad"
+                maxLength={4}
+                className="h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+              />
+            </>
+          )}
         </Card>
 
+        {mode === 'link' && (
+          <Card className="mt-4">
+            <Text className="mb-2 text-sm font-medium text-muted dark:text-muted-dark">Link URL</Text>
+            <TextInput
+              value={linkUrl}
+              onChangeText={setLinkUrl}
+              placeholder="https://drive.google.com/..."
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              className="h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+            />
+            <Text className="mt-2 text-xs text-muted dark:text-muted-dark">
+              A Google Drive, Docs, or other link other students can open directly.
+            </Text>
+          </Card>
+        )}
+
+        {mode === 'file' && (
         <Card className="mt-4">
           <Text className="mb-2 text-sm font-medium text-muted dark:text-muted-dark">Type</Text>
           <View className="flex-row">
@@ -246,7 +341,9 @@ export default function UploadPaperScreen() {
             </>
           )}
         </Card>
+        )}
 
+        {mode === 'file' && (
         <Card className="mt-4">
           <Text className="mb-2 text-sm font-medium text-muted dark:text-muted-dark">
             Image pages
@@ -298,9 +395,10 @@ export default function UploadPaperScreen() {
             </View>
           )}
         </Card>
+        )}
 
         <Button
-          label="Upload"
+          label={mode === 'file' ? 'Upload' : 'Submit Link'}
           onPress={handleSubmit}
           disabled={!isValid}
           loading={submitting}

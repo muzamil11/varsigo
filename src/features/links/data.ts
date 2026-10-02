@@ -3,6 +3,7 @@ export interface ImportantLink {
   title: string;
   subtitle?: string | null;
   url: string;
+  folderId?: string | null;
 }
 
 /** A user-submitted link awaiting admin approval — see AdminLinksPanel. */
