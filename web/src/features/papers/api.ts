@@ -121,6 +121,7 @@ export interface UploadPaperInput {
   year: number | null;
   kind: PaperKind;
   files: File[];
+  folderId?: string | null;
 }
 
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -236,6 +237,7 @@ export async function uploadPaper(input: UploadPaperInput): Promise<void> {
         kind: input.kind,
         fileUrl: uploadedUrls[0],
         fileUrls: uploadedUrls,
+        folderId: input.folderId ?? null,
       });
     } else {
       const { uploadsRequireApproval } = await fetchModerationSettings();
@@ -248,6 +250,7 @@ export async function uploadPaper(input: UploadPaperInput): Promise<void> {
         type: input.kind,
         file_url: uploadedUrls[0],
         file_urls: uploadedUrls,
+        folder_id: input.folderId ?? null,
         approved: !uploadsRequireApproval,
       });
       if (insertError) throw insertError;

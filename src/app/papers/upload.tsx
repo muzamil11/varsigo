@@ -10,12 +10,13 @@ import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
 import { suggestImportantLink } from '@/features/links/api';
 import {
+  fetchPaperFolders,
   MAX_IMAGE_BYTES,
   MAX_IMAGE_PAGES,
   MAX_UPLOAD_TOTAL_BYTES,
   uploadPaper,
 } from '@/features/papers/api';
-import { formatFileSize, type PaperKind } from '@/features/papers/data';
+import { formatFileSize, type PaperFolder, type PaperKind } from '@/features/papers/data';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeColors } from '@/store/themeStore';
 
@@ -50,8 +51,10 @@ export default function UploadPaperScreen() {
 
   const [mode, setMode] = useState<UploadMode>('file');
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [folders, setFolders] = useState<PaperFolder[]>([]);
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
+  const [folderId, setFolderId] = useState<string | null>(null);
   const [year, setYear] = useState('');
   const [kind, setKind] = useState<PaperKind>('past_paper');
   const [departmentId, setDepartmentId] = useState<string | null>(null);
@@ -64,7 +67,15 @@ export default function UploadPaperScreen() {
     fetchDepartments()
       .then(setDepartments)
       .catch(() => setDepartments([]));
+    fetchPaperFolders()
+      .then(setFolders)
+      .catch(() => setFolders([]));
   }, []);
+
+  const handleSelectFolder = (folder: PaperFolder | null) => {
+    setFolderId(folder?.id ?? null);
+    setSubject(folder?.name ?? '');
+  };
 
   const handlePickFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -147,6 +158,7 @@ export default function UploadPaperScreen() {
           title: title.trim(),
           url: linkUrl.trim(),
           subtitle: subject.trim(),
+          folderId,
         });
         Alert.alert(
           'Link received',
@@ -178,6 +190,7 @@ export default function UploadPaperScreen() {
           contentType: selected.mimeType,
           size: selected.size,
         })),
+        folderId,
       });
       Alert.alert(
         'Upload received',
@@ -254,18 +267,35 @@ export default function UploadPaperScreen() {
           />
 
           <Text className="mb-2 text-sm font-medium text-muted dark:text-muted-dark">Subject</Text>
-          <TextInput
-            value={subject}
-            onChangeText={setSubject}
-            placeholder="e.g. Operating Systems"
-            placeholderTextColor={colors.textMuted}
-            className={mode === 'file' ? 'mb-4 h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark' : 'h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark'}
-          />
-          {mode === 'link' && (
-            <Text className="mt-2 text-xs text-muted dark:text-muted-dark">
-              Helps admin sort this link under the right subject.
-            </Text>
+          {folders.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+              <Chip label="Not listed" selected={folderId === null} onPress={() => handleSelectFolder(null)} />
+              {folders.map((f) => (
+                <Chip
+                  key={f.id}
+                  label={f.name}
+                  selected={folderId === f.id}
+                  onPress={() => handleSelectFolder(f)}
+                />
+              ))}
+            </ScrollView>
           )}
+          {folderId === null && (
+            <TextInput
+              value={subject}
+              onChangeText={setSubject}
+              placeholder="e.g. Operating Systems"
+              placeholderTextColor={colors.textMuted}
+              className="h-12 rounded-xl border border-line bg-background px-3 text-base text-foreground dark:border-line-dark dark:bg-background-dark dark:text-foreground-dark"
+            />
+          )}
+          <Text className={mode === 'file' ? 'mb-4 mt-2 text-xs text-muted dark:text-muted-dark' : 'mt-2 text-xs text-muted dark:text-muted-dark'}>
+            {folderId !== null
+              ? "Doesn't match your subject exactly? Pick \"Not listed\" and type it yourself."
+              : mode === 'file'
+                ? "Not in the list above? Type it here — admin will sort it."
+                : 'Helps admin sort this link under the right subject.'}
+          </Text>
 
           {mode === 'file' && (
             <>

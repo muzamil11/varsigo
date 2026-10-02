@@ -350,6 +350,11 @@ Deno.serve(async (req) => {
         type: kind,
         file_url: fileUrl,
         file_urls: fileUrls,
+        // Student picked an existing subject folder at upload time (see
+        // paper_folders) instead of leaving it for admin to sort later —
+        // still goes through the normal approval gate above, this just
+        // skips the extra admin step of assigning the folder afterward.
+        folder_id: payload.folderId ?? null,
         approved: !uploadsRequireApproval,
       });
       if (error) throw error;

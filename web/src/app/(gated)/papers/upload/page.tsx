@@ -21,8 +21,8 @@ import { Button, Combobox, Screen } from '@/components';
 import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
 import { suggestImportantLink } from '@/features/links/api';
-import { uploadPaper, validateUploadFiles } from '@/features/papers/api';
-import type { PaperKind } from '@/features/papers/data';
+import { fetchPaperFolders, uploadPaper, validateUploadFiles } from '@/features/papers/api';
+import type { PaperFolder, PaperKind } from '@/features/papers/data';
 import { formatFileSize } from '@/features/papers/data';
 import { useAuthStore } from '@/store/authStore';
 
@@ -89,8 +89,10 @@ export default function UploadPaperPage() {
   const [mode, setMode] = useState<UploadMode>('file');
   const [step, setStep] = useState(0);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [folders, setFolders] = useState<PaperFolder[]>([]);
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
+  const [folderId, setFolderId] = useState('');
   const [departmentId, setDepartmentId] = useState('');
   const [year, setYear] = useState('');
   const [kind, setKind] = useState<PaperKind>('past_paper');
@@ -98,6 +100,17 @@ export default function UploadPaperPage() {
   const [linkUrl, setLinkUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const folderOptions = [
+    { value: '', label: 'Not listed — type my own' },
+    ...folders.map((f) => ({ value: f.id, label: f.name })),
+  ];
+
+  const handleSelectFolder = (value: string) => {
+    setFolderId(value);
+    const folder = folders.find((f) => f.id === value);
+    setSubject(folder?.name ?? '');
+  };
 
   const linkValid = title.trim().length > 0 && subject.trim().length > 0 && linkUrl.trim().length > 0;
 
@@ -111,6 +124,7 @@ export default function UploadPaperPage() {
         title: title.trim(),
         url: linkUrl.trim(),
         subtitle: subject.trim(),
+        folderId: folderId || null,
       });
       router.push('/papers');
     } catch (err) {
@@ -123,6 +137,9 @@ export default function UploadPaperPage() {
     fetchDepartments()
       .then(setDepartments)
       .catch(() => setDepartments([]));
+    fetchPaperFolders()
+      .then(setFolders)
+      .catch(() => setFolders([]));
   }, []);
 
   const selectedDepartment = useMemo(
@@ -167,6 +184,7 @@ export default function UploadPaperPage() {
         year: year ? Number(year) : null,
         kind,
         files,
+        folderId: folderId || null,
       });
       router.push('/papers');
     } catch (err) {
@@ -240,12 +258,20 @@ export default function UploadPaperPage() {
                   <BookOpen size={16} className="text-accent" />
                   Course or subject
                 </div>
-                <input
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="e.g. CT-504 Advanced Numerical Analysis"
+                <Combobox
+                  value={folderId}
+                  onChange={handleSelectFolder}
+                  options={folderOptions}
                   className={fieldClass()}
                 />
+                {folderId === '' && (
+                  <input
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="e.g. CT-504 Advanced Numerical Analysis"
+                    className={fieldClass('mt-2')}
+                  />
+                )}
                 <p className="mt-1.5 text-xs text-muted dark:text-muted-dark">
                   Helps admin sort this link under the right subject.
                 </p>
@@ -408,14 +434,22 @@ export default function UploadPaperPage() {
                     <BookOpen size={16} className="text-accent" />
                     Course or subject
                   </div>
-                  <input
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="e.g. CT-577 Advanced Theory of Automata"
+                  <Combobox
+                    value={folderId}
+                    onChange={handleSelectFolder}
+                    options={folderOptions}
                     className={fieldClass()}
                   />
+                  {folderId === '' && (
+                    <input
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="e.g. CT-577 Advanced Theory of Automata"
+                      className={fieldClass('mt-2')}
+                    />
+                  )}
                   <p className="mt-1.5 text-xs text-muted dark:text-muted-dark">
-                    Course search will become stronger as we map more NED course codes.
+                    Not listed? Type your own — admin will sort it into a subject folder.
                   </p>
                 </div>
 
