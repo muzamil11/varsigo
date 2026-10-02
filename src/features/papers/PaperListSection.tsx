@@ -3,8 +3,9 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import React, { useMemo, useState } from 'react';
-import { Alert, FlatList, Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { WebView } from 'react-native-webview';
 
 import { AnimatedListItem, Button, Chip, SearchBar, StateMessage } from '@/components';
 import type { Department } from '@/features/departments/types';
@@ -98,14 +99,18 @@ export function PaperListSection({
   };
 
   const openPaper = (paper: Paper) => {
-    if (getPaperFileType(paper.fileUrl) === 'image') {
-      setPreviewPaper(paper);
-      setPreviewIndex(0);
-      setPreviewRotation(0);
-      return;
-    }
-    handleDownload(paper);
+    setPreviewPaper(paper);
+    setPreviewIndex(0);
+    setPreviewRotation(0);
   };
+
+  /** WKWebView on iOS renders a PDF URL directly, but Android's WebView has
+   *  no built-in PDF renderer — routing it through Google's docs viewer is
+   *  the standard workaround for that platform. */
+  const pdfViewerSource = (url: string) =>
+    Platform.OS === 'android'
+      ? { uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}` }
+      : { uri: url };
 
   const handleDownload = async (paper: Paper) => {
     if (downloadingId) return;
@@ -238,14 +243,17 @@ export function PaperListSection({
               {previewPaper ? `Page ${previewIndex + 1} of ${previewPaper.fileUrls.length}` : ''}
             </Text>
             <View className="flex-row items-center gap-2">
-              <Pressable
-                onPress={() => setPreviewRotation((r) => (r + 90) % 360)}
-                hitSlop={8}
-                className="h-10 flex-row items-center gap-1.5 rounded-full bg-white/10 px-3"
-              >
-                <Ionicons name="refresh" size={18} color="#FFFFFF" />
-                <Text className="text-sm font-medium text-white">Rotate</Text>
-              </Pressable>
+              {previewPaper &&
+                getPaperFileType(previewPaper.fileUrls[previewIndex] ?? previewPaper.fileUrl) === 'image' && (
+                  <Pressable
+                    onPress={() => setPreviewRotation((r) => (r + 90) % 360)}
+                    hitSlop={8}
+                    className="h-10 flex-row items-center gap-1.5 rounded-full bg-white/10 px-3"
+                  >
+                    <Ionicons name="refresh" size={18} color="#FFFFFF" />
+                    <Text className="text-sm font-medium text-white">Rotate</Text>
+                  </Pressable>
+                )}
               <Pressable
                 onPress={() => setPreviewPaper(null)}
                 hitSlop={8}
@@ -256,14 +264,32 @@ export function PaperListSection({
             </View>
           </View>
           <View className="flex-1 items-center justify-center">
-            {previewPaper && (
-              <Image
-                source={{ uri: previewPaper.fileUrls[previewIndex] ?? previewPaper.fileUrl }}
-                style={{ transform: [{ rotate: `${previewRotation}deg` }] }}
-                className="h-full w-full"
-                resizeMode="contain"
-              />
-            )}
+            {previewPaper &&
+              (() => {
+                const currentUrl = previewPaper.fileUrls[previewIndex] ?? previewPaper.fileUrl;
+                if (getPaperFileType(currentUrl) === 'image') {
+                  return (
+                    <Image
+                      source={{ uri: currentUrl }}
+                      style={{ transform: [{ rotate: `${previewRotation}deg` }] }}
+                      className="h-full w-full"
+                      resizeMode="contain"
+                    />
+                  );
+                }
+                return (
+                  <WebView
+                    source={pdfViewerSource(currentUrl)}
+                    className="h-full w-full"
+                    startInLoadingState
+                    renderLoading={() => (
+                      <View className="absolute inset-0 items-center justify-center">
+                        <ActivityIndicator color="#FFFFFF" />
+                      </View>
+                    )}
+                  />
+                );
+              })()}
           </View>
           <View className="px-4 pb-4">
             {previewPaper && previewPaper.fileUrls.length > 1 && (
