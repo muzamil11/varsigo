@@ -5,6 +5,8 @@ export * from './Combobox';
 export * from './ErrorBoundary';
 export * from './Chip';
 export * from './Layout';
+export * from './OrgBadge';
+export * from './OrgMark';
 export * from './Screen';
 export * from './SearchBar';
 export * from './Skeleton';

@@ -18,7 +18,7 @@ import {
 import Link from 'next/link';
 import React from 'react';
 
-import { PageShell, Screen } from '@/components';
+import { OrgBadge, PageShell, Screen } from '@/components';
 import { FAQS } from '@/features/faq/data';
 import { fetchImportantLinks } from '@/features/links/api';
 import { fetchPapers } from '@/features/papers/api';
@@ -139,9 +139,7 @@ export default async function HomePage() {
             <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent text-white">
               <GraduationCap size={28} />
             </div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-              Built for NED students
-            </p>
+            <OrgBadge variant="full" className="mb-6" />
             <h1 className="text-4xl font-bold tracking-tight text-foreground dark:text-foreground-dark sm:text-5xl">
               Teacher reviews, papers, and campus answers in one place
             </h1>
