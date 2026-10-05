@@ -22,8 +22,7 @@ export interface OrganizationConfig {
 export const ORGANIZATION: OrganizationConfig = {
   name: 'NED CS&IT',
   tagline: 'Built for',
-  disclaimer:
-    'built for the NED CS&IT community by a NED CS&IT student, not an official NED University product.',
+  disclaimer: 'built for NED CS&IT. Not an official NED University product.',
   gradientFrom: '#13233F',
   gradientTo: '#6366F1',
 };
