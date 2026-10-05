@@ -42,9 +42,15 @@ export function Footer() {
           ))}
         </nav>
       </div>
-      <p className="border-t border-line px-4 py-4 text-center text-xs text-muted dark:border-line-dark dark:text-muted-dark">
-        © {new Date().getFullYear()} NEDHub — {ORGANIZATION.disclaimer}
-      </p>
+      <div className="border-t border-line px-4 py-4 text-center dark:border-line-dark">
+        <p className="text-xs text-muted dark:text-muted-dark">
+          © {new Date().getFullYear()} NEDHub — {ORGANIZATION.disclaimer}
+        </p>
+        <p className="mt-1 text-xs text-muted dark:text-muted-dark">
+          We use anonymous analytics to understand how NEDHub is used — no names, emails, or
+          account data are ever sent.
+        </p>
+      </div>
     </footer>
   );
 }

@@ -14,6 +14,8 @@ import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { Chip, PageShell, SearchBar, StateMessage } from '@/components';
+import { trackEvent } from '@/lib/analytics';
+import { useSearchTracking } from '@/lib/useSearchTracking';
 import { useAuthStore } from '@/store/authStore';
 import { fetchLostFoundItems, submitLostFoundItem } from './api';
 import { LOST_FOUND_KIND_LABELS, type LostFoundInput, type LostFoundItem, type LostFoundKind } from './data';
@@ -39,6 +41,7 @@ export function LostFoundPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  useSearchTracking('lost_found', query);
   const [kind, setKind] = useState<'All' | LostFoundKind>('All');
   const [formOpen, setFormOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -99,6 +102,7 @@ export function LostFoundPage() {
     setError(null);
     try {
       await submitLostFoundItem(form);
+      trackEvent('lost_found_reported', { kind: form.kind });
       setSubmitted(true);
       setForm(EMPTY_INPUT);
       setStep(1);

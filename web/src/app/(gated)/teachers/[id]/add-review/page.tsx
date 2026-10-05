@@ -8,6 +8,7 @@ import { Button, Chip, Screen, Switch } from '@/components';
 import { formatCourse } from '@/features/courses/types';
 import { fetchTeacherPublicById, submitReview } from '@/features/teachers/api';
 import type { TeacherDetail } from '@/features/teachers/data';
+import { trackEvent } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
 
 function ScoreSelector({
@@ -104,6 +105,7 @@ export default function AddReviewPage() {
         isAnonymous,
       });
       setSubmitted(true);
+      trackEvent('review_submitted');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not submit review.');
       setSubmitting(false);

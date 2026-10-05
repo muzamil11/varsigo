@@ -7,7 +7,6 @@ import {
   HelpCircle,
   Link2,
   MessageCircle,
-  Quote,
   Search,
   ShieldCheck,
   Sparkles,
@@ -23,17 +22,11 @@ import { FAQS } from '@/features/faq/data';
 import { fetchImportantLinks } from '@/features/links/api';
 import { fetchPapers } from '@/features/papers/api';
 import { getPaperFileType, PAPER_KIND_LABELS } from '@/features/papers/data';
-import { fetchRecentReviews } from '@/features/teachers/api';
 
 // Shorter than the old 300s — this page also shows the Important Links
 // preview, which should catch up soon after admin adds/approves a link
 // instead of staying stale for 5 min.
 export const revalidate = 60;
-
-const RECENT_REVIEWS_COUNT = 3;
-// Below this, the section reads as an empty/ghost-town platform rather than
-// a highlight — better to just not show it yet.
-const MIN_REVIEWS_TO_SHOW = 2;
 
 const RECENT_PAPERS_COUNT = 3;
 const MIN_PAPERS_TO_SHOW = 2;
@@ -108,14 +101,7 @@ const QUICK_FAQS = FAQS.slice(0, 4);
 
 export default async function HomePage() {
   // Best-effort — an outage here shouldn't fail this page's static
-  // generation, same reasoning as papers/page.tsx and teachers/page.tsx.
-  let recentReviews: Awaited<ReturnType<typeof fetchRecentReviews>> = [];
-  try {
-    recentReviews = await fetchRecentReviews(RECENT_REVIEWS_COUNT);
-  } catch {
-    recentReviews = [];
-  }
-
+  // generation, same reasoning as papers/page.tsx.
   let recentPapers: Awaited<ReturnType<typeof fetchPapers>> = [];
   try {
     recentPapers = (await fetchPapers()).slice(0, RECENT_PAPERS_COUNT);
@@ -253,42 +239,6 @@ export default async function HomePage() {
                   </div>
                   <ExternalLink size={16} className="shrink-0 text-muted dark:text-muted-dark" />
                 </a>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {recentReviews.length >= MIN_REVIEWS_TO_SHOW && (
-          <section className="mt-12">
-            <div className="mb-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-                Real feedback
-              </p>
-              <h2 className="mt-2 text-2xl font-bold text-foreground dark:text-foreground-dark">
-                What students are saying
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {recentReviews.map((review) => (
-                <Link
-                  key={review.id}
-                  href={`/teachers/${review.teacherId}`}
-                  className="rounded-2xl border border-line bg-card p-5 transition-transform duration-150 hover:-translate-y-0.5 dark:border-line-dark dark:bg-card-dark"
-                >
-                  <div className="flex items-center justify-between">
-                    <Quote size={18} className="text-accent/50" />
-                    <div className="flex items-center gap-1">
-                      <Star size={13} className="fill-accent text-accent" />
-                      <span className="text-xs font-bold text-accent">{review.rating.toFixed(1)}</span>
-                    </div>
-                  </div>
-                  <p className="mt-3 line-clamp-3 text-sm italic leading-6 text-foreground dark:text-foreground-dark">
-                    &ldquo;{review.comment}&rdquo;
-                  </p>
-                  <p className="mt-4 text-xs font-medium text-muted dark:text-muted-dark">
-                    — {review.author}, on {review.teacherName}
-                  </p>
-                </Link>
               ))}
             </div>
           </section>

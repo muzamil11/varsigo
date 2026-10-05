@@ -10,6 +10,7 @@ import { fetchDepartments } from '@/features/departments/api';
 import type { Department } from '@/features/departments/types';
 import type { QuestionListItem } from '@/features/questions/data';
 import { fetchQuestions, submitQuestion, toggleQuestionVote } from '@/features/questions/api';
+import { trackEvent } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
 
 export default function QuestionsPage() {
@@ -83,6 +84,7 @@ export default function QuestionsPage() {
       setAskTeacherName(null);
       setAskPaperId(null);
       setAskPaperName(null);
+      trackEvent('question_asked');
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not post question.');

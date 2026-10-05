@@ -19,6 +19,8 @@ import { createPortal } from 'react-dom';
 
 import { AnimatedListItem, Chip, Combobox, SearchBar, StateMessage } from '@/components';
 import type { Department } from '@/features/departments/types';
+import { trackEvent } from '@/lib/analytics';
+import { useSearchTracking } from '@/lib/useSearchTracking';
 import { PAPER_KIND_LABELS, buildDownloadUrl, getPaperFileType, type Paper } from './data';
 
 interface PaperListSectionProps {
@@ -53,6 +55,7 @@ export function PaperListSection({
   const [previewIndex, setPreviewIndex] = useState(0);
   const [rotation, setRotation] = useState(0);
   const isFiltered = Boolean(search.trim() || departmentId || kind !== 'All');
+  useSearchTracking('papers', search);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -74,6 +77,7 @@ export function PaperListSection({
   const openPreview = (paper: Paper, index: number) => {
     setPreviewPaper(paper);
     setPreviewIndex(index);
+    trackEvent('paper_viewed', { kind: paper.kind, folder_id: paper.folderId });
   };
   const closePreview = () => setPreviewPaper(null);
   const previewFiles = previewPaper
@@ -225,6 +229,7 @@ export function PaperListSection({
                             `${paper.title}.${files[0].split('?')[0].split('.').pop() ?? 'pdf'}`,
                           )}
                           download
+                          onClick={() => trackEvent('paper_downloaded', { kind: paper.kind, folder_id: paper.folderId })}
                           className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent text-sm font-semibold text-white"
                         >
                           <Download size={15} />
@@ -254,6 +259,7 @@ export function PaperListSection({
                                 }`,
                               )}
                               download
+                              onClick={() => trackEvent('paper_downloaded', { kind: paper.kind, folder_id: paper.folderId })}
                               aria-label={`Download page ${fileIndex + 1}`}
                               className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-white"
                             >
@@ -370,6 +376,9 @@ export function PaperListSection({
                   }`,
                 )}
                 download
+                onClick={() =>
+                  trackEvent('paper_downloaded', { kind: previewPaper.kind, folder_id: previewPaper.folderId })
+                }
                 className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-white"
               >
                 <Download size={14} />

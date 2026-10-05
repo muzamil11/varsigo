@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import React from 'react';
 
-import { ErrorBoundary } from '@/components';
+import { AnalyticsPageviewTracker, ErrorBoundary } from '@/components';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import './globals.css';
@@ -28,6 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         suppressHydrationWarning
       >
         <ErrorBoundary>
+          <AnalyticsPageviewTracker />
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />

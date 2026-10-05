@@ -4,12 +4,15 @@ import { ChevronDown, FileQuestion, HelpCircle, Search } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
 import { Chip, PageShell, SearchBar, StateMessage } from '@/components';
+import { trackEvent } from '@/lib/analytics';
+import { useSearchTracking } from '@/lib/useSearchTracking';
 import { FAQS, FAQ_CATEGORIES } from './data';
 
 export function FaqAccordion() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<(typeof FAQ_CATEGORIES)[number]>('All');
   const [openId, setOpenId] = useState<string | null>(FAQS[0]?.id ?? null);
+  useSearchTracking('faq', search);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -102,7 +105,11 @@ export function FaqAccordion() {
                 >
                   <button
                     type="button"
-                    onClick={() => setOpenId(isOpen ? null : item.id)}
+                    onClick={() => {
+                      const next = isOpen ? null : item.id;
+                      setOpenId(next);
+                      if (next) trackEvent('faq_opened', { faq_id: item.id, category: item.category });
+                    }}
                     className="flex min-h-16 w-full items-center gap-4 px-5 py-4 text-left"
                   >
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background text-xs font-bold text-foreground dark:bg-background-dark dark:text-foreground-dark">

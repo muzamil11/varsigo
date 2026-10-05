@@ -1,11 +1,12 @@
 'use client';
 
-import { AlertTriangle, CalendarDays, ChevronRight, FileText, Folder, LogIn, UploadCloud } from 'lucide-react';
+import { AlertTriangle, CalendarDays, ChevronRight, FileText, Folder, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { PageShell, SearchBar, StateMessage } from '@/components';
 import type { Department } from '@/features/departments/types';
+import { useSearchTracking } from '@/lib/useSearchTracking';
 import { useAuthStore } from '@/store/authStore';
 import { fetchPapers } from './api';
 import type { Paper, PaperFolder } from './data';
@@ -79,6 +80,7 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
   const [refreshState, setRefreshState] = useState<'idle' | 'loading' | 'settled'>('idle');
   const [clientError, setClientError] = useState<string | null>(null);
   const [folderSearch, setFolderSearch] = useState('');
+  useSearchTracking('paper_subjects', folderSearch);
   const loginHref = '/login?redirect=/papers';
   const uploadHref = '/papers/upload';
   const visibleError = clientError ?? error;
@@ -148,7 +150,7 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
 
   const heroCopy = isAuthenticated
     ? 'Browse approved papers, download files, or upload useful study resources for other NED students.'
-    : 'Sign in with Google to browse approved papers, download files, or upload useful study resources for other NED students.';
+    : 'Browse approved papers and download files — sign in with Google to upload your own.';
 
   return (
     <PageShell>
@@ -168,7 +170,7 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
               </p>
             </div>
 
-            {hasHydrated && isAuthenticated && (
+            {hasHydrated && (
               <div className="flex flex-wrap items-center gap-3">
                 {refreshingPapers && (
                   <span className="text-xs font-medium text-muted dark:text-muted-dark">
@@ -176,38 +178,18 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
                   </span>
                 )}
                 <Link
-                  href={uploadHref}
+                  href={isAuthenticated ? uploadHref : loginHref}
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white shadow-lg shadow-accent/20"
                 >
                   <UploadCloud size={17} />
-                  Upload paper
+                  {isAuthenticated ? 'Upload paper' : 'Sign in to upload'}
                 </Link>
               </div>
             )}
           </div>
         </div>
 
-        {hasHydrated && !isAuthenticated && (
-          <div className="m-5 rounded-2xl border border-line bg-background p-8 text-center dark:border-line-dark dark:bg-background-dark">
-            <LogIn className="mx-auto text-muted dark:text-muted-dark" size={30} />
-            <p className="mt-3 text-lg font-semibold text-foreground dark:text-foreground-dark">
-              Sign in to view papers
-            </p>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted dark:text-muted-dark">
-              Past papers and notes are available to signed-in students so uploads, downloads, and
-              moderation stay tied to real accounts.
-            </p>
-            <Link
-              href={loginHref}
-              className="mt-5 inline-flex rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-white"
-            >
-              Continue with Google
-            </Link>
-          </div>
-        )}
-
-        {hasHydrated && !isAuthenticated ? null : (
-          <div className="p-5 sm:p-7 lg:p-9">
+        <div className="p-5 sm:p-7 lg:p-9">
             {visibleError && (
               <div className="mb-8">
                 <StateMessage icon={AlertTriangle} title="Couldn't load papers" subtitle={visibleError} />
@@ -277,7 +259,6 @@ export function PaperBrowser({ papers: initialPapers, departments, folders, erro
               </>
             )}
           </div>
-        )}
       </section>
     </PageShell>
   );

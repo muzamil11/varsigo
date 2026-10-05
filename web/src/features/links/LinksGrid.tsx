@@ -4,6 +4,7 @@ import { ExternalLink, Link2 } from 'lucide-react';
 import React from 'react';
 
 import { StateMessage } from '@/components';
+import { trackEvent } from '@/lib/analytics';
 import type { ImportantLink } from './data';
 
 export function LinksGrid({ links }: { links: ImportantLink[] }) {
@@ -19,6 +20,7 @@ export function LinksGrid({ links }: { links: ImportantLink[] }) {
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackEvent('link_opened', { link_id: link.id })}
           className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-card p-5 transition-transform duration-150 hover:-translate-y-0.5 dark:border-line-dark dark:bg-card-dark"
         >
           <div className="flex items-center gap-3">

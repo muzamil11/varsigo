@@ -14,6 +14,7 @@ import {
   toggleAnswerVote,
   toggleQuestionVote,
 } from '@/features/questions/api';
+import { trackEvent } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
 import { MessageCircle } from 'lucide-react';
 
@@ -49,6 +50,7 @@ export default function QuestionDetailPage() {
     try {
       await submitAnswer({ questionId, userId: user.id, body: answerBody, isAnonymous: answerAnon });
       setAnswerBody('');
+      trackEvent('answer_submitted');
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not post answer.');

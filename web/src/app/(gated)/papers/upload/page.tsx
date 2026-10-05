@@ -24,6 +24,7 @@ import { suggestImportantLink } from '@/features/links/api';
 import { fetchPaperFolders, uploadPaper, validateUploadFiles } from '@/features/papers/api';
 import type { PaperFolder, PaperKind } from '@/features/papers/data';
 import { formatFileSize } from '@/features/papers/data';
+import { trackEvent } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
 
 const YEARS = ['2026', '2025', '2024', '2023', '2022'];
@@ -175,6 +176,7 @@ export default function UploadPaperPage() {
     if (!user || !canSubmit) return;
     setSubmitting(true);
     setError(null);
+    trackEvent('paper_upload_started', { kind });
     try {
       await uploadPaper({
         userId: user.id,
@@ -186,6 +188,7 @@ export default function UploadPaperPage() {
         files,
         folderId: folderId || null,
       });
+      trackEvent('paper_upload_completed', { kind });
       router.push('/papers');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not upload.');

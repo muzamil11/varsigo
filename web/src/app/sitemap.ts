@@ -1,26 +1,28 @@
 import type { MetadataRoute } from 'next';
 
-import { fetchTeachers } from '@/features/teachers/api';
+import { fetchPaperFolders } from '@/features/papers/api';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nedhub.vercel.app';
 
+// Teachers (and its reviews) is sign-in-only by design — opinion content
+// about identifiable people, not a public resource library — so it's
+// deliberately left out of the sitemap, same reasoning as robots.ts.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: 'daily', priority: 1 },
-    { url: `${SITE_URL}/teachers`, changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE_URL}/papers`, changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE_URL}/faq`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/links`, changeFrequency: 'monthly', priority: 0.4 },
   ];
 
   try {
-    const teachers = await fetchTeachers();
-    const teacherRoutes: MetadataRoute.Sitemap = teachers.map((t) => ({
-      url: `${SITE_URL}/teachers/${t.id}`,
+    const folders = await fetchPaperFolders();
+    const folderRoutes: MetadataRoute.Sitemap = folders.map((f) => ({
+      url: `${SITE_URL}/papers/folder/${f.id}`,
       changeFrequency: 'weekly',
       priority: 0.7,
     }));
-    return [...staticRoutes, ...teacherRoutes];
+    return [...staticRoutes, ...folderRoutes];
   } catch {
     // Backend not configured yet (e.g. during a build without env vars) —
     // fall back to the static routes only rather than failing the build.

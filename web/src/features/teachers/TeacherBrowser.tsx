@@ -8,6 +8,7 @@ import React, { useMemo, useState } from 'react';
 import { AnimatedListItem, APP_CONTAINER_CLASS, Button, Card, Chip, PageShell, SearchBar, StateMessage } from '@/components';
 import { formatCourse } from '@/features/courses/types';
 import type { Department } from '@/features/departments/types';
+import { useSearchTracking } from '@/lib/useSearchTracking';
 import {
   MAX_COMPARE_TEACHERS,
   MIN_COMPARE_TEACHERS,
@@ -55,6 +56,7 @@ function matchesSearch(text: string | null | undefined, query: string): boolean 
 export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserProps) {
   const router = useRouter();
   const [search, setSearch] = useState('');
+  useSearchTracking('teachers', search);
   const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [qualityFilters, setQualityFilters] = useState<Set<TeacherQualityKey>>(new Set());
   const [compareMode, setCompareMode] = useState(false);

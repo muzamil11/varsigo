@@ -8,6 +8,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 import { Button, Screen } from '@/components';
 import { upsertUserByGoogle } from '@/features/auth/api';
 import { completeGoogleRedirectSignIn, signInWithGoogle } from '@/features/auth/google';
+import { trackEvent } from '@/lib/analytics';
 import { getPostAuthRoute, withRedirect } from '@/lib/routing';
 import { useAuthStore } from '@/store/authStore';
 import { usePrivacyStore } from '@/store/privacyStore';
@@ -40,6 +41,7 @@ function LoginPageContent() {
       email: firebaseUser.email,
     });
     useAuthStore.getState().setUser(firebaseUser.uid, supabaseUser);
+    trackEvent('signin_completed');
     const nextRoute = getPostAuthRoute(supabaseUser, usePrivacyStore.getState().accepted, redirectTo);
     // Deliberately not resetting `loading` here — the button should stay
     // in its spinner state through the navigation below rather than
@@ -77,6 +79,7 @@ function LoginPageContent() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
+    trackEvent('signin_started');
     try {
       const firebaseUser = await signInWithGoogle();
       // null means signInWithGoogle() kicked off a mobile redirect instead
