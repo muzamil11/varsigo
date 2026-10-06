@@ -4,15 +4,33 @@ import React from 'react';
 import { AnalyticsPageviewTracker, ErrorBoundary } from '@/components';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
+import { SITE_URL } from '@/lib/site';
 import './globals.css';
 
+const SITE_TITLE = 'NEDHub - NED University Teacher Reviews, Past Papers & FAQ';
+const SITE_DESCRIPTION =
+  'NEDHub helps NED University students find honest teacher reviews, past papers, notes, and answers to common university questions.';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'NEDHub - NED University Teacher Reviews, Past Papers & FAQ',
+    default: SITE_TITLE,
     template: '%s | NEDHub',
   },
-  description:
-    'NEDHub helps NED University students find honest teacher reviews, past papers, notes, and answers to common university questions.',
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: 'NEDHub',
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 const THEME_SCRIPT = `(function(){try{var raw=localStorage.getItem('varsigo-theme');var theme=raw?JSON.parse(raw).state.theme:'dark';if(theme==='dark')document.documentElement.classList.add('dark');}catch(e){document.documentElement.classList.add('dark');}})();`;

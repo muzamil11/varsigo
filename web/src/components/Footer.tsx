@@ -13,6 +13,13 @@ const LINKS = [
   { href: '/questions', label: 'Q&A' },
 ];
 
+const LEGAL_LINKS = [
+  { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
+  { href: '/terms', label: 'Terms' },
+  { href: '/privacy-policy', label: 'Privacy' },
+];
+
 export function Footer() {
   return (
     <footer className="mt-24 border-t border-line dark:border-line-dark">
@@ -43,6 +50,17 @@ export function Footer() {
         </nav>
       </div>
       <div className="border-t border-line px-4 py-4 text-center dark:border-line-dark">
+        <nav className="mb-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+          {LEGAL_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-xs text-muted hover:text-foreground dark:text-muted-dark dark:hover:text-foreground-dark"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
         <p className="text-xs text-muted dark:text-muted-dark">
           © {new Date().getFullYear()} NEDHub — {ORGANIZATION.disclaimer}
         </p>

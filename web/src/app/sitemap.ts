@@ -1,8 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 import { fetchPaperFolders } from '@/features/papers/api';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nedhub.vercel.app';
+import { SITE_URL } from '@/lib/site';
 
 // Teachers (and its reviews) is sign-in-only by design — opinion content
 // about identifiable people, not a public resource library — so it's
@@ -13,6 +12,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/papers`, changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE_URL}/faq`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/links`, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${SITE_URL}/about`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${SITE_URL}/contact`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${SITE_URL}/terms`, changeFrequency: 'yearly', priority: 0.2 },
+    { url: `${SITE_URL}/privacy-policy`, changeFrequency: 'yearly', priority: 0.2 },
   ];
 
   try {
