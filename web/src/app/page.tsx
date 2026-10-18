@@ -140,7 +140,14 @@ export default async function HomePage() {
               NEDHub helps students find course-linked teacher context, approved study resources,
               and practical FAQ answers without digging through scattered links.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              href="/search"
+              className="mt-6 flex h-12 max-w-xl items-center gap-2.5 rounded-full border border-line bg-background px-4 text-sm text-muted dark:border-line-dark dark:bg-background-dark dark:text-muted-dark"
+            >
+              <Search size={16} />
+              Search teachers, papers, FAQs, questions…
+            </Link>
+            <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href="/teachers"
                 className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 text-base font-semibold text-white"

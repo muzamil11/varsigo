@@ -1,6 +1,6 @@
 'use client';
 
-import { GraduationCap, LogOut, Menu, Shield, X } from 'lucide-react';
+import { GraduationCap, LogOut, Menu, Search, Shield, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useState } from 'react';
@@ -102,6 +102,13 @@ export function Header() {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
+          <Link
+            href="/search"
+            aria-label="Search"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-card text-foreground dark:border-line-dark dark:bg-card-dark dark:text-foreground-dark"
+          >
+            <Search size={17} />
+          </Link>
           <ThemeToggle />
           <div className="hidden sm:block">{authControl}</div>
           <button

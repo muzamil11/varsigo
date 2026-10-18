@@ -30,6 +30,9 @@ export default function robots(): MetadataRoute.Robots {
         '/onboarding-name',
         '/privacy-notice',
         '/papers/upload',
+        // Pure client component, no SSR content, results depend on
+        // sign-in state — nothing stable here for a crawler to index.
+        '/search',
       ],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
