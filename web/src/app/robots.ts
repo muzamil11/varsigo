@@ -6,7 +6,17 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: '*',
-      allow: ['/', '/papers', '/faq', '/links', '/about', '/contact', '/terms', '/privacy-policy'],
+      allow: [
+        '/',
+        '/papers',
+        '/faq',
+        '/links',
+        '/about',
+        '/contact',
+        '/terms',
+        '/privacy-policy',
+        '/gpa-calculator',
+      ],
       // Gated pages have no content worth indexing (sign-in prompt only).
       // Teachers (and its reviews) is deliberately sign-in-only — it's
       // opinion content about identifiable people, not a resource library

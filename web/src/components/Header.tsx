@@ -17,6 +17,7 @@ const NAV_LINKS = [
   { href: '/lost-found', label: 'Lost & Found' },
   { href: '/faq', label: 'FAQ' },
   { href: '/questions', label: 'Q&A' },
+  { href: '/gpa-calculator', label: 'GPA Calc' },
 ];
 
 export function Header() {

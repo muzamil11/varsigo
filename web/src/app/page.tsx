@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  Calculator,
   CheckCircle2,
   ExternalLink,
   FileText,
@@ -69,6 +70,12 @@ const FEATURES = [
     icon: MessageCircle,
     title: 'Student Q&A',
     description: 'Ask campus questions and help other students with practical answers.',
+  },
+  {
+    href: '/gpa-calculator',
+    icon: Calculator,
+    title: 'GPA Calculator',
+    description: "Work out your semester GPA and cumulative CGPA on NED's official grading scale.",
   },
 ];
 
