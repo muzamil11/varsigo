@@ -157,19 +157,12 @@ export function GpaCalculator() {
         <div className="text-sm leading-6 text-foreground dark:text-foreground-dark">
           <p className="font-semibold">What you&apos;ll need</p>
           <p className="mt-1 text-muted dark:text-muted-dark">
-            Your result slip, DMC, or ERP portal — each course row there already lists the{' '}
+            For each course, you&apos;ll need its{' '}
             <strong className="text-foreground dark:text-foreground-dark">credit hours</strong>{' '}
-            right next to the grade. Most theory courses are 3 credit hours, labs are usually 1.
-            For the cumulative CGPA below, your transcript also shows your{' '}
-            <strong className="text-foreground dark:text-foreground-dark">
-              Cumulative GPA
-            </strong>{' '}
-            and{' '}
-            <strong className="text-foreground dark:text-foreground-dark">
-              Total Credit Hours Earned
-            </strong>{' '}
-            so far — that&apos;s all this needs, you don&apos;t have to re-enter every past
-            semester.
+            and the grade you got — check your transcript, DMC, or course outline if
+            you&apos;re not sure of a course&apos;s credit hours. For the cumulative CGPA
+            below, enter your current CGPA and total credit hours completed so far —
+            you don&apos;t have to re-enter every past semester.
           </p>
         </div>
       </div>
@@ -300,8 +293,7 @@ export function GpaCalculator() {
             />
           </div>
           <p className="mt-2 text-xs text-muted dark:text-muted-dark">
-            From your transcript: &quot;Cumulative GPA&quot; and &quot;Total Credit Hours
-            Earned&quot;. Leave blank to see just this semester&apos;s GPA.
+            Optional — leave blank to see just this semester&apos;s GPA.
           </p>
         </div>
       </section>
