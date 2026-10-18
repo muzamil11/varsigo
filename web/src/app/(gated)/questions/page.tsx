@@ -30,6 +30,7 @@ export default function QuestionsPage() {
   const [askPaperId, setAskPaperId] = useState<string | null>(null);
   const [askPaperName, setAskPaperName] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+  const [votingIds, setVotingIds] = useState<Set<string>>(new Set());
 
   // Arriving from a teacher's review page or a paper card's "Ask a
   // question" link — open straight into the form with that teacher/paper
@@ -94,11 +95,19 @@ export default function QuestionsPage() {
   };
 
   const handleVote = async (id: string) => {
+    if (votingIds.has(id)) return;
+    setVotingIds((prev) => new Set(prev).add(id));
     try {
       await toggleQuestionVote(id);
       load();
     } catch {
       // best-effort
+    } finally {
+      setVotingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -193,7 +202,8 @@ export default function QuestionsPage() {
               <button
                 type="button"
                 onClick={() => handleVote(q.id)}
-                className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border ${
+                disabled={votingIds.has(q.id)}
+                className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border disabled:opacity-50 ${
                   q.votedByMe ? 'border-accent bg-accent/10 text-accent' : 'border-line text-muted dark:border-line-dark dark:text-muted-dark'
                 }`}
               >

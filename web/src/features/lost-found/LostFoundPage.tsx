@@ -38,7 +38,10 @@ export function LostFoundPage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
   const user = useAuthStore((s) => s.user);
   const [items, setItems] = useState<LostFoundItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Starts true so the first paint (before hydration resolves, or on a
+  // client-side nav to this page) shows the loading skeleton instead of a
+  // flash of "No approved items yet" before the real fetch has even run.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   useSearchTracking('lost_found', query);
@@ -49,16 +52,19 @@ export function LostFoundPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  useEffect(() => {
-    if (!hasHydrated || !isAuthenticated) return;
-    void Promise.resolve().then(() => {
-      setLoading(true);
-      setError(null);
-    });
+  const load = () => {
+    setLoading(true);
+    setError(null);
     fetchLostFoundItems()
       .then(setItems)
       .catch((err) => setError(err instanceof Error ? err.message : 'Could not load Lost & Found.'))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!hasHydrated || !isAuthenticated) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional load-on-mount, matches questions/page.tsx's same pattern
+    load();
   }, [hasHydrated, isAuthenticated]);
 
   const filtered = useMemo(() => {

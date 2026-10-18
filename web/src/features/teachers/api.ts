@@ -343,12 +343,15 @@ export async function fetchTeachersForCompare(ids: string[]): Promise<TeacherDet
   return Promise.all(ids.map((id) => fetchTeacherById(id)));
 }
 
-/** Public-safe subset of fetchTeacherById — name/department/courses only,
- *  no ratings or review text. Used by the public (server-rendered,
- *  indexable) teacher detail page so review content never ends up in the
- *  RSC payload sent to anonymous visitors/crawlers; the gated
- *  ReviewsSection client component calls the full fetchTeacherById itself,
- *  only after confirming the visitor is signed in. */
+/** Review-free subset of fetchTeacherById — name/department/courses only,
+ *  no ratings or review text. The whole teachers/[id] route now lives
+ *  under (gated) (sign-in required, excluded from robots.txt/sitemap —
+ *  not actually public/indexable), but this still matters as
+ *  defense-in-depth: it's what the Server Component page itself (and its
+ *  generateMetadata, which runs before the client-side gate can apply)
+ *  fetches, so review content never enters the RSC payload at all. The
+ *  gated ReviewsSection client component calls the full fetchTeacherById
+ *  itself, only after confirming the visitor is signed in. */
 export async function fetchTeacherPublicById(
   id: string,
 ): Promise<Pick<TeacherDetail, 'id' | 'name' | 'department' | 'courses' | 'verificationStatus'>> {

@@ -259,16 +259,21 @@ export async function submitAnswer(input: {
     });
     if (insertError) throw insertError;
 
-    const { data: question, error: fetchError } = await supabase
-      .from('questions')
-      .select('answer_count')
-      .eq('id', input.questionId)
-      .single();
-    if (fetchError) throw fetchError;
+    // Recompute from the actual row count rather than read-then-increment a
+    // stored counter — two answers submitted close together would otherwise
+    // both read the same stale count and both write count+1, permanently
+    // undercounting by one. Matches the community-action Edge Function's
+    // own submitAnswer handler, which does the same recompute.
+    const { count, error: countError } = await supabase
+      .from('answers')
+      .select('id', { count: 'exact', head: true })
+      .eq('question_id', input.questionId)
+      .eq('status', 'active');
+    if (countError) throw countError;
 
     const { error: updateError } = await supabase
       .from('questions')
-      .update({ answer_count: Number((question as { answer_count?: number }).answer_count ?? 0) + 1 })
+      .update({ answer_count: count ?? 0 })
       .eq('id', input.questionId);
     if (updateError) throw updateError;
   } catch (error) {

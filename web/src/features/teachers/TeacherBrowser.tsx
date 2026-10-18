@@ -136,7 +136,7 @@ export function TeacherBrowser({ teachers, departments, error }: TeacherBrowserP
       <p className="mb-6 text-sm text-muted dark:text-muted-dark">
         {compareMode
           ? `Pick ${MIN_COMPARE_TEACHERS}-${MAX_COMPARE_TEACHERS} teachers to compare side by side.`
-          : 'Sign in to read full reviews for any teacher.'}
+          : 'Browse teachers and read full reviews from other students.'}
       </p>
 
       <div className="max-w-3xl">

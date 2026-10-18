@@ -29,6 +29,28 @@ export default function QuestionDetailPage() {
   const [answerBody, setAnswerBody] = useState('');
   const [answerAnon, setAnswerAnon] = useState(true);
   const [posting, setPosting] = useState(false);
+  const [busyActions, setBusyActions] = useState<Set<string>>(new Set());
+
+  // Shared guard for vote/report buttons below — without it, a double-click
+  // fires the toggle/report call twice before `load()` has refreshed
+  // votedByMe/reportedByMe, producing an extra unintended toggle or a
+  // duplicate report.
+  const runAction = async (key: string, action: () => Promise<unknown>) => {
+    if (busyActions.has(key)) return;
+    setBusyActions((prev) => new Set(prev).add(key));
+    try {
+      await action();
+      load();
+    } catch {
+      // best-effort
+    } finally {
+      setBusyActions((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  };
 
   const load = () => {
     setLoading(true);
@@ -84,8 +106,9 @@ export default function QuestionDetailPage() {
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => toggleQuestionVote(questionId).then(load)}
-              className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border ${
+              onClick={() => runAction('q-vote', () => toggleQuestionVote(questionId))}
+              disabled={busyActions.has('q-vote')}
+              className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border disabled:opacity-50 ${
                 question.votedByMe
                   ? 'border-accent bg-accent/10 text-accent'
                   : 'border-line text-muted dark:border-line-dark dark:text-muted-dark'
@@ -112,8 +135,8 @@ export default function QuestionDetailPage() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => reportQuestion(questionId).then(load)}
-                  disabled={question.reportedByMe}
+                  onClick={() => runAction('q-report', () => reportQuestion(questionId))}
+                  disabled={question.reportedByMe || busyActions.has('q-report')}
                   className="flex items-center gap-1 disabled:opacity-50"
                 >
                   <Flag size={12} />
@@ -135,8 +158,9 @@ export default function QuestionDetailPage() {
           >
             <button
               type="button"
-              onClick={() => toggleAnswerVote(answer.id).then(load)}
-              className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border ${
+              onClick={() => runAction(`a-vote-${answer.id}`, () => toggleAnswerVote(answer.id))}
+              disabled={busyActions.has(`a-vote-${answer.id}`)}
+              className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border disabled:opacity-50 ${
                 answer.votedByMe
                   ? 'border-accent bg-accent/10 text-accent'
                   : 'border-line text-muted dark:border-line-dark dark:text-muted-dark'
@@ -156,8 +180,8 @@ export default function QuestionDetailPage() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => reportAnswer(answer.id).then(load)}
-                  disabled={answer.reportedByMe}
+                  onClick={() => runAction(`a-report-${answer.id}`, () => reportAnswer(answer.id))}
+                  disabled={answer.reportedByMe || busyActions.has(`a-report-${answer.id}`)}
                   className="flex items-center gap-1 disabled:opacity-50"
                 >
                   <Flag size={12} />

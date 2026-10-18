@@ -93,13 +93,14 @@ export default function AdminLinksPage() {
 
   const handleApprove = async (id: string) => {
     if (!user?.email) return;
+    const previous = pending;
     setPending((prev) => prev.filter((l) => l.id !== id));
     try {
       await approveImportantLink(user.email, id);
       load();
     } catch (err) {
+      setPending(previous);
       setError(err instanceof Error ? err.message : 'Could not approve link.');
-      load();
     }
   };
 

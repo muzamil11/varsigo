@@ -159,7 +159,7 @@ async function createSignedUploadSlots(files: File[]): Promise<SignedUploadSlot[
     {
       files: files.map((file) => ({
         name: file.name,
-        contentType: file.type || 'application/octet-stream',
+        contentType: contentTypeForFile(file.name) ?? 'application/octet-stream',
         size: file.size,
       })),
     },
@@ -167,16 +167,40 @@ async function createSignedUploadSlots(files: File[]): Promise<SignedUploadSlot[
   return result.uploads;
 }
 
-/** Validates each file's size against the mobile app's same caps before
- *  attempting any upload — the browser gives us a File/Blob directly (no
- *  base64 round-trip needed here, unlike React Native's fetch().blob()
- *  bug), so this is simpler than the mobile equivalent. */
+/** Maps a file's own extension to the content-type we'll actually store it
+ *  as — never trust the browser-supplied `file.type` for this. `file.type`
+ *  reflects what the browser *guessed* (or what a hand-constructed File
+ *  object claims), not what the bytes are; it's trivial to pick an
+ *  arbitrary file (rename it, or drag-and-drop past the `accept` picker
+ *  hint, which is UI-only and not enforced) and have it upload with
+ *  whatever type the browser reports. Keying off the extension against a
+ *  fixed allow-list is just as spoofable in theory but means uploads are
+ *  gated on something validateUploadFiles below can check *and* reject,
+ *  instead of blindly trusting file.type end to end. */
+const EXTENSION_CONTENT_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+};
+
+function contentTypeForFile(fileName: string): string | null {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  return ext ? (EXTENSION_CONTENT_TYPES[ext] ?? null) : null;
+}
+
+/** Validates each file's type and size against the mobile app's same caps
+ *  before attempting any upload — the browser gives us a File/Blob
+ *  directly (no base64 round-trip needed here, unlike React Native's
+ *  fetch().blob() bug), so this is simpler than the mobile equivalent. */
 export function validateUploadFiles(files: File[]): string | null {
   if (files.length === 0) return 'Choose at least one image.';
   if (files.length > MAX_IMAGE_PAGES) return `Choose at most ${MAX_IMAGE_PAGES} files.`;
 
   let total = 0;
   for (const file of files) {
+    if (!contentTypeForFile(file.name)) {
+      return `"${file.name}" isn't a supported file type (JPG or PNG only).`;
+    }
     if (file.size > MAX_IMAGE_BYTES) {
       return `"${file.name}" is too large (max ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB).`;
     }
@@ -208,15 +232,16 @@ export async function uploadPaper(input: UploadPaperInput): Promise<void> {
     for (const [index, file] of input.files.entries()) {
       const uploadSlot = signedUploads?.[index] ?? null;
       const path = uploadSlot?.path ?? `${input.userId}/${Date.now()}-${index + 1}-${safeFileName(file.name)}`;
+      // Already validated by validateUploadFiles above — contentTypeForFile
+      // returning null here would mean that check was skipped or bypassed,
+      // so fail closed rather than fall back to trusting file.type.
+      const contentType = contentTypeForFile(file.name);
+      if (!contentType) throw new Error(`"${file.name}" isn't a supported file type.`);
       const { error: uploadError } = uploadSlot
         ? await supabase.storage
             .from(PAPERS_BUCKET)
-            .uploadToSignedUrl(path, uploadSlot.token, file, {
-              contentType: file.type || 'application/octet-stream',
-            })
-        : await supabase.storage
-            .from(PAPERS_BUCKET)
-            .upload(path, file, { contentType: file.type || 'application/octet-stream' });
+            .uploadToSignedUrl(path, uploadSlot.token, file, { contentType })
+        : await supabase.storage.from(PAPERS_BUCKET).upload(path, file, { contentType });
       if (uploadError) throw uploadError;
       uploadedPaths.push(path);
 
